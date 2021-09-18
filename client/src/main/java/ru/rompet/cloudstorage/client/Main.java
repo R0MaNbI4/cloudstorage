@@ -1,0 +1,7 @@
+package ru.rompet.cloudstorage.client;
+
+public class Main {
+    public static void main(String[] args) {
+
+    }
+}

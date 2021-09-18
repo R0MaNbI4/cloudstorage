@@ -1,0 +1,9 @@
+*.iml
+*.mdj 
+*.txt
+*.md
+!readme.md
+*.log
+
+lib/
+.idea/
