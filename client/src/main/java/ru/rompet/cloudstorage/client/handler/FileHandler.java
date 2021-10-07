@@ -18,6 +18,8 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             load(ctx, response);
         } else if (response.getCommand() == Command.SAVE) {
             save(ctx, response);
+        } else if (response.getCommand() == Command.DELETE) {
+            delete(ctx, response);
         }
     }
 
@@ -56,6 +58,14 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
                 request.setLastPart(false);
             }
             ctx.writeAndFlush(request);
+        }
+    }
+
+    private void delete(ChannelHandlerContext ctx, Response response) throws Exception {
+        if (response.isSuccessful()) {
+            System.out.println("deleted");
+        } else {
+            System.out.println("not deleted");
         }
     }
 }

@@ -6,6 +6,7 @@ import ru.rompet.cloudstorage.common.Command;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
 
+import java.io.File;
 import java.io.RandomAccessFile;
 
 public class FileHandler extends SimpleChannelInboundHandler<Request> {
@@ -18,6 +19,10 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             load(ctx, request);
         } else if (request.getCommand() == Command.SAVE) {
             save(ctx, request);
+        } else if (request.getCommand() == Command.DELETE) {
+            delete(ctx, request);
+        } else if (request.getCommand() == Command.UPDATE) {
+            update(ctx, request);
         }
     }
 
@@ -45,6 +50,9 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void save(ChannelHandlerContext ctx, Request request) throws Exception {
+        if (request.getCommand() == Command.UPDATE) {
+            request.setCommand(Command.SAVE);
+        }
         if (!request.hasData()) {
             Response response = new Response();
             response.setCommand(request.getCommand());
@@ -63,6 +71,27 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             response.setFilename(request.getFilename());
             response.setPosition(request.getPosition() + BUFFER_SIZE);
             ctx.writeAndFlush(response);
+        }
+    }
+
+    private boolean delete(ChannelHandlerContext ctx, Request request) throws Exception {
+        File file = new File(DEFAULT_FILE_LOCATION + request.getFilename());
+        Response response = new Response();
+        response.setCommand(request.getCommand());
+        if (file.delete()) {
+            response.setSuccessful(true);
+            ctx.writeAndFlush(response);
+            return true;
+        } else {
+            response.setSuccessful(false);
+            ctx.writeAndFlush(response);
+            return false;
+        }
+    }
+
+    private void update(ChannelHandlerContext ctx, Request request) throws Exception {
+        if (delete(ctx, request)) {
+            save(ctx, request);
         }
     }
 }

@@ -6,6 +6,12 @@ public class Response {
     private long position;
     private byte[] file;
     private boolean isLastPart;
+    private boolean isSuccessful;
+    private boolean isFileAlreadyExists;
+
+    public Response() {
+        setSuccessful(true);
+    }
 
     public String getFilename() {
         return filename;
@@ -45,5 +51,21 @@ public class Response {
 
     public void setCommand(Command command) {
         this.command = command;
+    }
+
+    public boolean isSuccessful() {
+        return isSuccessful;
+    }
+
+    public void setSuccessful(boolean successful) {
+        isSuccessful = successful;
+    }
+
+    public boolean isFileAlreadyExists() {
+        return isFileAlreadyExists;
+    }
+
+    public void setFileAlreadyExists(boolean fileAlreadyExists) {
+        isFileAlreadyExists = fileAlreadyExists;
     }
 }
