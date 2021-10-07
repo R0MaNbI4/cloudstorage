@@ -1,28 +1,70 @@
 package ru.rompet.cloudstorage.client.handler;
 
-import io.netty.util.internal.StringUtil;
 import ru.rompet.cloudstorage.common.Command;
 
-import java.io.File;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 
 public class ConsoleInputHandler {
-    String input;
+    private String[] args;
+    private Command command;
+    private Path path;
+    private ArrayList<String> parameters;
 
-    public ConsoleInputHandler(String input) {
-        this.input = input;
+    public ConsoleInputHandler() {
+        parameters = new ArrayList<>();
+    }
+
+    public boolean validate(String input) {
+        this.args = input.split("\\s");
+        return isValidCommand() && isValidPath() && isValidParameters();
     }
 
     public Command getCommand() {
-        return Command.valueOf(input.split("\\s")[0].toUpperCase());
+        return command;
     }
 
     public String getFilename() {
-        String path = input.split("\\s")[1];
-        return new File(path).getName();
+        return path.getFileName().toString();
+    }
+
+    public ArrayList<String> getParameters() {
+        return parameters;
     }
 
     public String getPath() {
-        String path = input.split("\\s")[1];
-        return new File(path).getPath();
+        return path.toString();
+    }
+
+    public boolean isValidCommand() {
+        try {
+            command = Command.valueOf(args[0].toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isValidPath() {
+        try {
+            path = Paths.get(args[args.length - 1]);
+        } catch (InvalidPathException | NullPointerException e) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean isValidParameters() {
+        parameters.clear();
+        for (int i = 1; i <= args.length - 2; i++) {
+            if (args[i].matches("\\s-[a-zA-Z]*\\s")) {
+                parameters.add(args[i]);
+            } else {
+                return false;
+            }
+        }
+        return true;
     }
 }

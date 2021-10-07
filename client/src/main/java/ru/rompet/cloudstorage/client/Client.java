@@ -54,12 +54,22 @@ public class Client{
             System.out.println("Client started");
 
             Scanner scanner = new Scanner(System.in);
+            ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
             while (true) {
-                Request request = new Request();
-                ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler(scanner.nextLine());
-                request.setCommand(consoleInputHandler.getCommand());
-                request.setFilename(consoleInputHandler.getFilename());
-                f.channel().writeAndFlush(request);
+                if (consoleInputHandler.validate(scanner.nextLine())) {
+                    Request request = new Request();
+                    request.setCommand(consoleInputHandler.getCommand());
+                    request.setFilename(consoleInputHandler.getFilename());
+                    f.channel().writeAndFlush(request);
+                } else {
+                    if (!consoleInputHandler.isValidCommand()) {
+                        System.out.println("Invalid command");
+                    } else if (!consoleInputHandler.isValidPath()) {
+                        System.out.println("Invalid path");
+                    } else if (!consoleInputHandler.isValidParameters()) {
+                        System.out.println("Invalid parameter");
+                    }
+                }
             }
         } finally {
             group.shutdownGracefully();
