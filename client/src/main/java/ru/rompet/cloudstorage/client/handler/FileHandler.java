@@ -24,48 +24,59 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
     }
 
     private void load(ChannelHandlerContext ctx, Response response) throws Exception {
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(
-                DEFAULT_FILE_LOCATION + response.getFilename(), "rw")) {
-            randomAccessFile.seek(response.getPosition());
-            randomAccessFile.write(response.getFile());
-        }
-        if (!response.isLastPart()) {
-            Request request = new Request();
-            request.setCommand(Command.LOAD);
-            request.setFilename(response.getFilename());
-            request.setPosition(response.getPosition() + BUFFER_SIZE);
-            ctx.writeAndFlush(request);
+        System.out.println(response.errorInfo().isSuccessful());
+        if (response.errorInfo().isSuccessful()) {
+            writePartFile(response);
+            if (!response.partFileInfo().isLastPart()) {
+                Request request = new Request(response);
+                request.partFileInfo().addPosition(response, BUFFER_SIZE);
+                ctx.writeAndFlush(request);
+            }
+        } else {
+            if (response.errorInfo().isFileNotExists()) {
+                System.out.println("File not exists");
+            }
         }
     }
 
     private void save(ChannelHandlerContext ctx, Response response) throws Exception {
-        Request request = new Request();
-        request.setPosition(response.getPosition());
-        request.setFilename(response.getFilename());
-        request.setCommand(response.getCommand());
-        byte[] buffer = new byte[BUFFER_SIZE];
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(
-                DEFAULT_FILE_LOCATION + response.getFilename(), "r")) {
-            randomAccessFile.seek(response.getPosition());
-            int read = randomAccessFile.read(buffer);
-            if (read < buffer.length - 1) {
-                byte[] tempBuffer = new byte[read];
-                System.arraycopy(buffer, 0, tempBuffer, 0, read);
-                request.setFile(tempBuffer);
-                request.setLastPart(true);
-            } else {
-                request.setFile(buffer);
-                request.setLastPart(false);
-            }
-            ctx.writeAndFlush(request);
-        }
+        ctx.writeAndFlush(readPartFile(response));
     }
 
     private void delete(ChannelHandlerContext ctx, Response response) throws Exception {
-        if (response.isSuccessful()) {
+        if (response.errorInfo().isSuccessful()) {
             System.out.println("deleted");
         } else {
             System.out.println("not deleted");
         }
+    }
+
+    private void writePartFile(Response response) throws Exception {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(
+                DEFAULT_FILE_LOCATION + response.getFilename(), "rw")) {
+            randomAccessFile.seek(response.partFileInfo().getPosition());
+            randomAccessFile.write(response.partFileInfo().getFile());
+        }
+    }
+
+    private Request readPartFile(Response response) throws Exception {
+        Request request = new Request(response);
+        request.partFileInfo().setPosition(response);
+        byte[] buffer = new byte[BUFFER_SIZE];
+        try (RandomAccessFile accessFile = new RandomAccessFile(
+                DEFAULT_FILE_LOCATION + response.getFilename(), "r")) {
+            accessFile.seek(response.partFileInfo().getPosition());
+            int read = accessFile.read(buffer);
+            if (read < buffer.length - 1) {
+                byte[] tempBuffer = new byte[read];
+                System.arraycopy(buffer, 0, tempBuffer, 0, read);
+                request.partFileInfo().setFile(tempBuffer);
+                request.partFileInfo().setLastPart(true);
+            } else {
+                request.partFileInfo().setFile(buffer);
+                request.partFileInfo().setLastPart(false);
+            }
+        }
+        return request;
     }
 }
