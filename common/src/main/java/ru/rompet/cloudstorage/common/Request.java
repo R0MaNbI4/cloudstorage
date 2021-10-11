@@ -1,53 +1,21 @@
 package ru.rompet.cloudstorage.common;
 
-public class Request {
-    private String filename;
-    private Command command;
-    private byte[] file;
-    private long position;
-    private boolean isLastPart;
+import java.io.Serializable;
 
-    public String getFilename() {
-        return filename;
+public class Request extends Message implements Serializable
+{
+    private Request(){
     }
 
-    public void setFilename(String filename) {
-        this.filename = filename;
+    public Request(Command command, String filename) {
+        super(command, filename);
     }
 
-    public Command getCommand() {
-        return command;
-    }
-
-    public void setCommand(Command command) {
-        this.command = command;
-    }
-
-    public byte[] getFile() {
-        return file;
-    }
-
-    public void setFile(byte[] file) {
-        this.file = file;
-    }
-
-    public long getPosition() {
-        return position;
-    }
-
-    public void setPosition(long position) {
-        this.position = position;
-    }
-
-    public boolean isLastPart() {
-        return isLastPart;
-    }
-
-    public void setLastPart(boolean lastPart) {
-        isLastPart = lastPart;
+    public Request(Response response) {
+        super(response);
     }
 
     public boolean hasData() {
-        return getFile() != null;
+        return getPartFileInfo().getFile() == null || getPartFileInfo().getFile().length == 0;
     }
 }
