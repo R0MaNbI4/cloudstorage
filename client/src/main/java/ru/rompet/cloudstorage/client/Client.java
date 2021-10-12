@@ -59,7 +59,7 @@ public class Client{
                 if (consoleInputHandler.validate(scanner.nextLine())) {
                     Request request = new Request(
                             consoleInputHandler.getCommand(),
-                            consoleInputHandler.getFilename()
+                            consoleInputHandler.getPath()
                     );
                     f.channel().writeAndFlush(request);
                 } else {

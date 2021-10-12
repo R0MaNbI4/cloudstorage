@@ -22,6 +22,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             case SAVE -> save(ctx, request);
             case DELETE -> delete(ctx, request);
             case UPDATE -> update(ctx, request);
+            case DIR -> dir(ctx, request);
         }
     }
 
@@ -66,6 +67,12 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
         if (delete(ctx, request)) {
             save(ctx, new Request(Command.SAVE, request.getFilename()));
         }
+    }
+
+    private void dir(ChannelHandlerContext ctx, Request request) throws Exception {
+        Response response = new Response(request);
+        response.getDirectoryStructure().scan(DEFAULT_FILE_LOCATION);
+        ctx.writeAndFlush(response);
     }
 
     private Response readPartFile(Request request) throws Exception {

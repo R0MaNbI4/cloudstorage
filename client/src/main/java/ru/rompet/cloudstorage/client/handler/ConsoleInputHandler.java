@@ -26,9 +26,9 @@ public class ConsoleInputHandler {
         return command;
     }
 
-    public String getFilename() {
-        return path.getFileName().toString();
-    }
+//    public String getFilename() {
+//        return path.getFileName().toString();
+//    }
 
     public ArrayList<String> getParameters() {
         return parameters;

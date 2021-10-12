@@ -2,6 +2,7 @@ package ru.rompet.cloudstorage.client.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import ru.rompet.cloudstorage.common.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
 
@@ -17,6 +18,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             case LOAD -> load(ctx, response);
             case SAVE -> save(ctx, response);
             case DELETE -> delete(ctx, response);
+            case DIR -> dir(ctx, response);
         }
     }
 
@@ -44,6 +46,12 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             System.out.println("deleted");
         } else {
             System.out.println("not deleted");
+        }
+    }
+
+    private void dir(ChannelHandlerContext ctx, Response response) throws Exception {
+        for (DirectoryStructureEntry entry : response.getDirectoryStructure()) {
+            System.out.println(entry.getName() + "\t" + entry.getSizeInBytes() + "\t" + entry.isDirectory());
         }
     }
 
