@@ -1,7 +1,10 @@
 package ru.rompet.cloudstorage.common;
 
+import ru.rompet.cloudstorage.common.data.DirectoryStructure;
+import ru.rompet.cloudstorage.common.data.ErrorInfo;
+import ru.rompet.cloudstorage.common.enums.Command;
+
 import java.io.Serializable;
-import java.util.ArrayList;
 
 public class Response extends Message implements Serializable {
     private ErrorInfo errorInfo;
@@ -9,8 +12,8 @@ public class Response extends Message implements Serializable {
 
     private Response(){};
 
-    public Response(Command command, String filename) {
-        super(command, filename);
+    public Response(Command command, String fromPath, String toPath) {
+        super(command, fromPath, toPath);
         errorInfo = new ErrorInfo();
         directoryStructure = new DirectoryStructure();
     }

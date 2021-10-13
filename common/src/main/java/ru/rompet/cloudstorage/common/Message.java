@@ -1,21 +1,27 @@
 package ru.rompet.cloudstorage.common;
 
+import ru.rompet.cloudstorage.common.data.PartFileInfo;
+import ru.rompet.cloudstorage.common.enums.Command;
+
 import java.io.Serializable;
 
 public class Message implements Serializable {
     private Command command;
-    private String filename;
+    private String fromPath;
+    private String toPath;
     private PartFileInfo partFileInfo;
 
-    protected Message(Command command, String filename) {
-        setCommand(command);
-        setFilename(filename);
+    protected Message(Command command, String fromPath, String toPath) {
+        this.command = command;
+        this.fromPath = fromPath;
+        this.toPath = toPath;
         partFileInfo = new PartFileInfo();
     }
 
     protected Message(Message message) {
-        setCommand(message.getCommand());
-        setFilename(message.getFilename());
+        this.command = message.getCommand();
+        this.fromPath = message.getFromPath();
+        this.toPath = message.getToPath();
         partFileInfo = new PartFileInfo();
     }
 
@@ -25,16 +31,12 @@ public class Message implements Serializable {
         return command;
     }
 
-    public String getFilename() {
-        return filename;
+    public String getFromPath() {
+        return fromPath;
     }
 
-    protected void setCommand(Command command) {
-        this.command = command;
-    }
-
-    protected void setFilename(String filename) {
-        this.filename = filename;
+    public String getToPath() {
+        return toPath;
     }
 
     public PartFileInfo getPartFileInfo() {

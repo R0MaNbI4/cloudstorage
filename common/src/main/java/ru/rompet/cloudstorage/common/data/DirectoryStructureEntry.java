@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.data;
 
 
 public class DirectoryStructureEntry {

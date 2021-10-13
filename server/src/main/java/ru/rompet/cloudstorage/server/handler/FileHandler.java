@@ -2,7 +2,6 @@ package ru.rompet.cloudstorage.server.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import ru.rompet.cloudstorage.common.Command;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
 
@@ -21,13 +20,12 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             case LOAD -> load(ctx, request);
             case SAVE -> save(ctx, request);
             case DELETE -> delete(ctx, request);
-            case UPDATE -> update(ctx, request);
             case DIR -> dir(ctx, request);
         }
     }
 
     private void load(ChannelHandlerContext ctx, Request request) throws Exception {
-        if (Files.exists(Path.of(DEFAULT_FILE_LOCATION + request.getFilename()))) {
+        if (Files.exists(Path.of(DEFAULT_FILE_LOCATION + request.getFromPath()))) {
             ctx.writeAndFlush(readPartFile(request));
         } else {
             Response response = new Response(request);
@@ -38,8 +36,9 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void save(ChannelHandlerContext ctx, Request request) throws Exception {
-        if (!request.hasData()) {
+        if (!request.hasData()) { // first initial request
             ctx.writeAndFlush(new Response(request));
+            createDirectoryIfNotExists(request);
         } else {
             writePartFile(request);
             if (!request.getPartFileInfo().isLastPart()) {
@@ -51,7 +50,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private boolean delete(ChannelHandlerContext ctx, Request request) throws Exception {
-        File file = new File(DEFAULT_FILE_LOCATION + request.getFilename());
+        File file = new File(DEFAULT_FILE_LOCATION + request.getFromPath());
         Response response = new Response(request);
         if (file.delete()) {
             ctx.writeAndFlush(response);
@@ -60,12 +59,6 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             response.getErrorInfo().setSuccessful(false);
             ctx.writeAndFlush(response);
             return false;
-        }
-    }
-
-    private void update(ChannelHandlerContext ctx, Request request) throws Exception {
-        if (delete(ctx, request)) {
-            save(ctx, new Request(Command.SAVE, request.getFilename()));
         }
     }
 
@@ -80,7 +73,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
         response.getPartFileInfo().setPosition(request);
         byte[] buffer = new byte[BUFFER_SIZE];
         try (RandomAccessFile accessFile =
-                     new RandomAccessFile(DEFAULT_FILE_LOCATION + request.getFilename(), "r")) {
+                     new RandomAccessFile(DEFAULT_FILE_LOCATION + request.getFromPath(), "r")) {
             accessFile.seek(request.getPartFileInfo().getPosition());
             int read = accessFile.read(buffer);
             if (read < buffer.length - 1) {
@@ -98,9 +91,16 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
 
     private void writePartFile(Request request) throws Exception {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(
-                DEFAULT_FILE_LOCATION + request.getFilename(), "rw")) {
+                DEFAULT_FILE_LOCATION + request.getToPath(), "rw")) {
             randomAccessFile.seek(request.getPartFileInfo().getPosition());
             randomAccessFile.write(request.getPartFileInfo().getFile());
+        }
+    }
+
+    private void createDirectoryIfNotExists(Request request) throws Exception {
+        Path path = Path.of(DEFAULT_FILE_LOCATION + request.getToPath()).getParent();
+        if (Files.notExists(path)) {
+            Files.createDirectories(path);
         }
     }
 }

@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.data;
 
 import java.io.Serializable;
 
@@ -7,7 +7,7 @@ public class ErrorInfo implements Serializable {
     private boolean isFileAlreadyExists;
     private boolean isFileNotExists;
 
-    ErrorInfo() {
+    public ErrorInfo() {
         setSuccessful(true);
     }
 

@@ -59,7 +59,8 @@ public class Client{
                 if (consoleInputHandler.validate(scanner.nextLine())) {
                     Request request = new Request(
                             consoleInputHandler.getCommand(),
-                            consoleInputHandler.getPath()
+                            consoleInputHandler.getFromPath(),
+                            consoleInputHandler.getToPath()
                     );
                     f.channel().writeAndFlush(request);
                 } else {
@@ -67,8 +68,6 @@ public class Client{
                         System.out.println("Invalid command");
                     } else if (!consoleInputHandler.isValidPath()) {
                         System.out.println("Invalid path");
-                    } else if (!consoleInputHandler.isValidParameters()) {
-                        System.out.println("Invalid parameter");
                     }
                 }
             }

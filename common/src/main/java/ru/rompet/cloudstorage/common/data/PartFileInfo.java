@@ -1,4 +1,7 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.data;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import ru.rompet.cloudstorage.common.Message;
 
 import java.io.Serializable;
 
@@ -37,5 +40,10 @@ public class PartFileInfo implements Serializable {
 
     public void setLastPart(boolean lastPart) {
         isLastPart = lastPart;
+    }
+
+    @JsonIgnore
+    public boolean isFirstPart() {
+        return position == 0;
     }
 }

@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.data;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 
