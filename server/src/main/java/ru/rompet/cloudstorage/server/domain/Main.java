@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.server;
+package ru.rompet.cloudstorage.server.domain;
 
 public class Main {
     public static void main(String[] args) {

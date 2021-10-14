@@ -12,10 +12,8 @@ public class Response extends Message implements Serializable {
 
     private Response(){};
 
-    public Response(Command command, String fromPath, String toPath) {
-        super(command, fromPath, toPath);
-        errorInfo = new ErrorInfo();
-        directoryStructure = new DirectoryStructure();
+    public Response(Command command) {
+        super(command);
     }
 
     public Response(Request request) {

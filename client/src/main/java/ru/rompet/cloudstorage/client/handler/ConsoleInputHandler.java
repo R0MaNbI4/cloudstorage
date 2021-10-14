@@ -12,16 +12,37 @@ public class ConsoleInputHandler {
     private Command command;
     private Path fromPath;
     private Path toPath;
+    private String login;
+    private String password;
     private ArrayList<String> parameters;
+    boolean isValidCommand;
+    boolean isValidCredentials;
+    boolean isValidPath;
 
     public ConsoleInputHandler() {
         parameters = new ArrayList<>();
     }
 
     public boolean validate(String input) {
+        isValidCommand = isValidCredentials = isValidPath = true;
         this.args = input.split("\\s");
-        tryGetParameters();
-        return isValidCommand() && isValidPath();
+        if (!parseCommand()) {
+            isValidCommand = false;
+            return false;
+        }
+        parseParameters();
+        if (command == Command.AUTH) {
+            if (!parseCredentials()) {
+                isValidCredentials = false;
+                return false;
+            }
+        } else {
+            if (!parsePath()) {
+                isValidPath = false;
+                return false;
+            }
+        }
+        return true;
     }
 
     public Command getCommand() {
@@ -40,7 +61,31 @@ public class ConsoleInputHandler {
         return toPath.toString();
     }
 
+    public String getLogin() {
+        return login;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public boolean hasParameters() {
+        return parameters.size() != 0;
+    }
+
     public boolean isValidCommand() {
+        return isValidCommand;
+    }
+
+    public boolean isValidCredentials() {
+        return isValidCredentials;
+    }
+
+    public boolean isValidPath() {
+        return isValidPath;
+    }
+
+    private boolean parseCommand() {
         try {
             command = Command.valueOf(args[0].toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -49,25 +94,7 @@ public class ConsoleInputHandler {
         return true;
     }
 
-    public boolean isValidPath() {
-        try {
-            fromPath = Path.of(args[1 + parameters.size()]);
-            if (args.length - 1 == 2 + parameters.size()) {
-                toPath = Path.of(args[2 + parameters.size()]);
-            } else {
-                toPath = fromPath;
-            }
-        } catch (InvalidPathException | NullPointerException e) {
-            return false;
-        }
-        return true;
-    }
-
-    public boolean hasParameters() {
-        return parameters.size() != 0;
-    }
-
-    private void tryGetParameters() {
+    private void parseParameters() {
         parameters.clear();
         for (int i = 1; i < args.length; i++) {
             if (Parameter.has(args[i].substring(1))) {
@@ -76,5 +103,29 @@ public class ConsoleInputHandler {
                 break;
             }
         }
+    }
+
+    public boolean parsePath() {
+        try {
+            fromPath = Path.of(args[1 + parameters.size()]);
+            if (args.length - 1 == 2 + parameters.size()) {
+                toPath = Path.of(args[2 + parameters.size()]);
+            } else {
+                toPath = fromPath;
+            }
+        } catch (InvalidPathException | ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean parseCredentials() {
+        try {
+            login = args[1 + parameters.size()];
+            password = args[2 + parameters.size()];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
+        return true;
     }
 }

@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class DirectoryStructure implements Iterable<DirectoryStructureEntry> {
-    private ArrayList<DirectoryStructureEntry> directoryStructure;
+    private final ArrayList<DirectoryStructureEntry> directoryStructure;
 
     public DirectoryStructure() {
         this.directoryStructure = new ArrayList<>();

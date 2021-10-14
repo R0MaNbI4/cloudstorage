@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.server;
+package ru.rompet.cloudstorage.server.domain;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -11,9 +11,9 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
-import ru.rompet.cloudstorage.server.handler.FileHandler;
-import ru.rompet.cloudstorage.server.handler.JsonDecoder;
-import ru.rompet.cloudstorage.server.handler.JsonEncoder;
+import ru.rompet.cloudstorage.server.domain.handler.FileHandler;
+import ru.rompet.cloudstorage.server.domain.handler.JsonDecoder;
+import ru.rompet.cloudstorage.server.domain.handler.JsonEncoder;
 
 public class Server {
     private final int MAX_FRAME_LENGTH = 1024 * 1024;

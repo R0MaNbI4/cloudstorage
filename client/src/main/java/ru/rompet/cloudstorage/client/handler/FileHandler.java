@@ -2,6 +2,7 @@ package ru.rompet.cloudstorage.client.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import ru.rompet.cloudstorage.client.Client;
 import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
@@ -21,6 +22,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             case SAVE -> save(ctx, response);
             case DELETE -> delete(ctx, response);
             case DIR -> dir(ctx, response);
+            case AUTH -> auth(ctx, response);
         }
     }
 
@@ -55,6 +57,16 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
     private void dir(ChannelHandlerContext ctx, Response response) throws Exception {
         for (DirectoryStructureEntry entry : response.getDirectoryStructure()) {
             System.out.println(entry.getName() + "\t" + entry.getSizeInBytes() + "\t" + entry.isDirectory());
+        }
+    }
+
+    private void auth(ChannelHandlerContext ctx, Response response) {
+        if (response.isAuthenticated()) {
+            Client.setLogin(response.getCredentials().getLogin());
+            Client.setAuthenticated(response.isAuthenticated());
+            System.out.println("Successful");
+        } else {
+            System.out.println("Authentication failed");
         }
     }
 

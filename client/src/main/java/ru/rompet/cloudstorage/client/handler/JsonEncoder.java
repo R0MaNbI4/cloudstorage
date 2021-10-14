@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import ru.rompet.cloudstorage.common.Request;
-import ru.rompet.cloudstorage.common.Response;
 
 import java.util.List;
 

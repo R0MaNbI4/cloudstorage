@@ -6,7 +6,7 @@ public class DirectoryStructureEntry {
     private long sizeInBytes;
     private boolean directory;
 
-    DirectoryStructureEntry(){};
+    DirectoryStructureEntry(){}
 
     public DirectoryStructureEntry(String name, long sizeInBytes, boolean isDirectory) {
         this.name = name;

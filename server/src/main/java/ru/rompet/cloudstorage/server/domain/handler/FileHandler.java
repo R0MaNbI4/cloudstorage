@@ -1,9 +1,10 @@
-package ru.rompet.cloudstorage.server.handler;
+package ru.rompet.cloudstorage.server.domain.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.server.dao.AuthenticationService;
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -21,6 +22,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             case SAVE -> save(ctx, request);
             case DELETE -> delete(ctx, request);
             case DIR -> dir(ctx, request);
+            case AUTH -> auth(ctx, request);
         }
     }
 
@@ -65,6 +67,17 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
     private void dir(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
         response.getDirectoryStructure().scan(DEFAULT_FILE_LOCATION);
+        ctx.writeAndFlush(response);
+    }
+
+    private void auth(ChannelHandlerContext ctx, Request request) {
+        Response response = new Response(request);
+        response.setAuthenticated(
+                AuthenticationService.auth(
+                        request.getCredentials().getLogin(),
+                        request.getCredentials().getPassword()
+                )
+        );
         ctx.writeAndFlush(response);
     }
 

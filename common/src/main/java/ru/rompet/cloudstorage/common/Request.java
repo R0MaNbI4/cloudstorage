@@ -6,11 +6,10 @@ import java.io.Serializable;
 
 public class Request extends Message implements Serializable
 {
-    private Request(){
-    }
+    private Request(){}
 
-    public Request(Command command, String fromPath, String toPath) {
-        super(command, fromPath, toPath);
+    public Request(Command command) {
+        super(command);
     }
 
     public Request(Response response) {
