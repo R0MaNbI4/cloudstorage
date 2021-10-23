@@ -23,6 +23,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             case DELETE -> delete(ctx, response);
             case DIR -> dir(ctx, response);
             case AUTH -> auth(ctx, response);
+            case REGISTER -> register(ctx, response);
         }
     }
 
@@ -71,6 +72,14 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             System.out.println("Successful");
         } else {
             System.out.println("Authentication failed");
+        }
+    }
+
+    private void register(ChannelHandlerContext ctx, Response response) {
+        if (response.getErrorInfo().isSuccessful()) {
+            System.out.println("Successful");
+        } else {
+            System.out.println("Registration failed");
         }
     }
 

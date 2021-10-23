@@ -35,7 +35,7 @@ public class ConsoleInputHandler {
             fromPath = toPath = Path.of("");
             return true;
         }
-        if (command == Command.AUTH) {
+        if (command == Command.AUTH || command == Command.REGISTER) {
             if (!parseCredentials()) {
                 isValidCredentials = false;
                 return false;

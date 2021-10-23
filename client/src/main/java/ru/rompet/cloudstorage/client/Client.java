@@ -62,7 +62,7 @@ public class Client{
                 if (consoleInputHandler.validate(scanner.nextLine())) {
                     Request request = new Request(consoleInputHandler.getCommand());
                     request.setAuthenticated(authenticated);
-                    if (consoleInputHandler.getCommand() == Command.AUTH) {
+                    if (consoleInputHandler.getCommand() == Command.AUTH || consoleInputHandler.getCommand() == Command.REGISTER) {
                         request.getCredentials().setLogin(consoleInputHandler.getLogin());
                         request.getCredentials().setPassword(consoleInputHandler.getPassword());
                         if (request.isAuthenticated()) {

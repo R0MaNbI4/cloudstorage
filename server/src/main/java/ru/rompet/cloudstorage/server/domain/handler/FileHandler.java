@@ -24,6 +24,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             case DELETE -> delete(ctx, request);
             case DIR -> dir(ctx, request);
             case AUTH -> auth(ctx, request);
+            case REGISTER -> register(ctx, request);
         }
     }
 
@@ -84,6 +85,15 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
                         request.getCredentials().getPassword()
                 )
         );
+        ctx.writeAndFlush(response);
+    }
+
+    private void register(ChannelHandlerContext ctx, Request request) {
+        Response response = new Response(request);
+        response.getErrorInfo().setSuccessful(AuthenticationService.register(
+                request.getCredentials().getLogin(),
+                request.getCredentials().getPassword()
+        ));
         ctx.writeAndFlush(response);
     }
 
