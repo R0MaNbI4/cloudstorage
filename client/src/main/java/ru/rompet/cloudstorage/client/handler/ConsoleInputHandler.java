@@ -31,6 +31,10 @@ public class ConsoleInputHandler {
             return false;
         }
         parseParameters();
+        if (command == Command.DIR && args.length == 1) {
+            fromPath = toPath = Path.of("");
+            return true;
+        }
         if (command == Command.AUTH) {
             if (!parseCredentials()) {
                 isValidCredentials = false;

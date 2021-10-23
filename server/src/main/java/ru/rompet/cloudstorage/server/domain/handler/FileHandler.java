@@ -9,6 +9,7 @@ import ru.rompet.cloudstorage.server.dao.AuthenticationService;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 public class FileHandler extends SimpleChannelInboundHandler<Request> {
@@ -66,7 +67,12 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
 
     private void dir(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
-        response.getDirectoryStructure().scan(DEFAULT_FILE_LOCATION);
+        try {
+            response.getDirectoryStructure().scan(DEFAULT_FILE_LOCATION + request.getFromPath());
+        } catch (NoSuchFileException e) {
+            response.getErrorInfo().setSuccessful(false);
+            response.getErrorInfo().setFileNotExists(true);
+        }
         ctx.writeAndFlush(response);
     }
 

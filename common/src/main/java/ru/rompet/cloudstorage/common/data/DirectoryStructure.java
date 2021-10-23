@@ -30,10 +30,11 @@ public class DirectoryStructure implements Iterable<DirectoryStructureEntry> {
 
     private List<Path> listFiles(Path path) throws IOException {
         List<Path> result;
+        Path parent = path.getParent();
         try (Stream<Path> walk = Files.walk(path, 1)) {
             result = walk
                     .filter(x -> Files.isRegularFile(x) || Files.isDirectory(x))
-                    .filter(x -> x.getParent() != null) // exclude parent directory
+                    .filter(x -> x.getParent() != null && !x.getParent().equals(parent)) // exclude parent directory
                     .collect(Collectors.toList());
         }
         return result;

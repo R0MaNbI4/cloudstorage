@@ -55,8 +55,12 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
     }
 
     private void dir(ChannelHandlerContext ctx, Response response) throws Exception {
-        for (DirectoryStructureEntry entry : response.getDirectoryStructure()) {
-            System.out.println(entry.getName() + "\t" + entry.getSizeInBytes() + "\t" + entry.isDirectory());
+        if (response.getErrorInfo().isSuccessful()) {
+            for (DirectoryStructureEntry entry : response.getDirectoryStructure()) {
+                System.out.println(entry.getName() + "\t" + entry.getSizeInBytes() + "\t" + entry.isDirectory());
+            }
+        } else if (response.getErrorInfo().isFileNotExists()) {
+            System.out.println("Path is not exists");
         }
     }
 
