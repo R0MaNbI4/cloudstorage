@@ -7,10 +7,14 @@ import ru.rompet.cloudstorage.common.Request;
 import ru.rompet.cloudstorage.server.dao.AuthenticationService;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class FileHandler extends SimpleChannelInboundHandler<Request> {
     private final int BUFFER_SIZE = 1024 * 512;
@@ -29,8 +33,21 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void load(ChannelHandlerContext ctx, Request request) throws Exception {
-        if (Files.exists(Path.of(DEFAULT_FILE_LOCATION + request.getFromPath()))) {
-            ctx.writeAndFlush(readPartFile(request));
+        Path path = Path.of(DEFAULT_FILE_LOCATION + request.getFromPath());
+        if (Files.exists(path)) {
+            if (Files.isRegularFile(path)) {
+                ctx.writeAndFlush(readPartFile(request));
+            } else if (Files.isDirectory(path)) {
+                request.setFromPath(request.getFromPath() + "\\"); // can't do it on client side, because it can be file without extension
+                request.setToPath(request.getToPath() + "\\");
+                List<Path> filePaths = listFiles(Path.of(request.getFromPath()), Path.of(DEFAULT_FILE_LOCATION));
+                for (Path filePath : filePaths) {
+                    Request request1 = (Request) request.clone();
+                    request1.setFromPath(request.getFromPath() + filePath.toString());
+                    request1.setToPath(request.getToPath() + filePath.toString());
+                    ctx.writeAndFlush(readPartFile(request1));
+                }
+            }
         } else {
             Response response = new Response(request);
             response.getErrorInfo().setSuccessful(false);
@@ -131,5 +148,17 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
         if (Files.notExists(path)) {
             Files.createDirectories(path);
         }
+    }
+
+    private List<Path> listFiles(Path path, Path root) throws IOException {
+        List<Path> result;
+        Path fullPath = root.resolve(path);
+        try (Stream<Path> walk = Files.walk(fullPath, 1)) {
+            result = walk
+                    .filter(Files::isRegularFile)
+                    .map(Path::getFileName)
+                    .collect(Collectors.toList());
+        }
+        return result;
     }
 }
