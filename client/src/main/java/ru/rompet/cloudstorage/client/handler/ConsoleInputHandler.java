@@ -14,7 +14,7 @@ public class ConsoleInputHandler {
     private Path toPath;
     private String login;
     private String password;
-    private ArrayList<String> parameters;
+    private ArrayList<Parameter> parameters;
     boolean isValidCommand;
     boolean isValidCredentials;
     boolean isValidPath;
@@ -53,7 +53,7 @@ public class ConsoleInputHandler {
         return command;
     }
 
-    public ArrayList<String> getParameters() {
+    public ArrayList<Parameter> getParameters() {
         return parameters;
     }
 
@@ -101,8 +101,9 @@ public class ConsoleInputHandler {
     private void parseParameters() {
         parameters.clear();
         for (int i = 1; i < args.length; i++) {
-            if (Parameter.has(args[i].substring(1))) {
-                parameters.add(args[i]);
+            String enumString = args[i].substring(1).toUpperCase();
+            if (Parameter.has(enumString)) {
+                parameters.add(Parameter.valueOf(enumString));
             } else {
                 break;
             }

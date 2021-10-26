@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 import ru.rompet.cloudstorage.server.dao.AuthenticationService;
 
 import java.io.File;
@@ -40,7 +41,10 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             } else if (Files.isDirectory(path)) {
                 request.setFromPath(request.getFromPath() + "\\"); // can't do it on client side, because it can be file without extension
                 request.setToPath(request.getToPath() + "\\");
-                List<Path> filePaths = listFiles(Path.of(request.getFromPath()), Path.of(DEFAULT_FILE_LOCATION));
+                List<Path> filePaths = listFiles(
+                        Path.of(request.getFromPath()),
+                        Path.of(DEFAULT_FILE_LOCATION),
+                        request.getParameters().contains(Parameter.R));
                 for (Path filePath : filePaths) {
                     Request request1 = (Request) request.clone();
                     request1.setFromPath(request.getFromPath() + filePath.toString());
@@ -122,7 +126,10 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
                      new RandomAccessFile(DEFAULT_FILE_LOCATION + request.getFromPath(), "r")) {
             accessFile.seek(request.getPartFileInfo().getPosition());
             int read = accessFile.read(buffer);
-            if (read < buffer.length - 1) {
+            if (read == -1) {
+                response.getPartFileInfo().setFile(new byte[0]);
+                response.getPartFileInfo().setLastPart(true);
+            } else if (read < buffer.length - 1) {
                 byte[] tempBuffer = new byte[read];
                 System.arraycopy(buffer, 0, tempBuffer, 0, read);
                 response.getPartFileInfo().setFile(tempBuffer);
@@ -150,13 +157,13 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
         }
     }
 
-    private List<Path> listFiles(Path path, Path root) throws IOException {
+    private List<Path> listFiles(Path path, Path root, boolean recursive) throws IOException {
         List<Path> result;
         Path fullPath = root.resolve(path);
-        try (Stream<Path> walk = Files.walk(fullPath, 1)) {
+        try (Stream<Path> walk = Files.walk(fullPath, recursive ? Integer.MAX_VALUE : 1)) {
             result = walk
                     .filter(Files::isRegularFile)
-                    .map(Path::getFileName)
+                    .map(recursive ? fullPath::relativize : Path::getFileName)
                     .collect(Collectors.toList());
         }
         return result;

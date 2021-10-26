@@ -3,8 +3,10 @@ package ru.rompet.cloudstorage.common;
 import ru.rompet.cloudstorage.common.data.Credentials;
 import ru.rompet.cloudstorage.common.data.PartFileInfo;
 import ru.rompet.cloudstorage.common.enums.Command;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 
 public class Message implements Serializable {
     private boolean authenticated;
@@ -13,6 +15,7 @@ public class Message implements Serializable {
     private Credentials credentials;
     private String fromPath;
     private String toPath;
+    private ArrayList<Parameter> parameters;
 
     protected Message(Command command) {
         this();
@@ -30,6 +33,7 @@ public class Message implements Serializable {
     protected Message(){
         partFileInfo = new PartFileInfo();
         credentials = new Credentials();
+        parameters = new ArrayList<>();
     }
 
     public Command getCommand() {
@@ -66,5 +70,13 @@ public class Message implements Serializable {
 
     public void setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
+    }
+
+    public ArrayList<Parameter> getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(ArrayList<Parameter> parameters) {
+        this.parameters = parameters;
     }
 }
