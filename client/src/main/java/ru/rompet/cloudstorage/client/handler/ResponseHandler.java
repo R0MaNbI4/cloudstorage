@@ -3,20 +3,18 @@ package ru.rompet.cloudstorage.client.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import ru.rompet.cloudstorage.client.Client;
+import ru.rompet.cloudstorage.common.data.DirectoryStructure;
 import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
-import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-public class FileHandler extends SimpleChannelInboundHandler<Response> {
+public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
     private final int BUFFER_SIZE = 1024 * 512;
     private final String DEFAULT_FILE_LOCATION = "clientFiles\\";
 
@@ -56,10 +54,11 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             } else if (Files.isDirectory(path)) {
                 response.setFromPath(response.getFromPath() + "\\");
                 response.setToPath(response.getToPath() + "\\");
-                List<Path> filePaths = listFiles(
+                List<Path> filePaths = DirectoryStructure.listFiles(
                         Path.of(response.getFromPath()),
                         Path.of(DEFAULT_FILE_LOCATION),
-                        response.getParameters().contains(Parameter.R));
+                        response.hasParameter(Parameter.R),
+                        false);
                 for (Path filePath : filePaths) {
                     Request request = new Request(response);
                     request.setFromPath(response.getFromPath() + filePath.toString());
@@ -76,7 +75,13 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
         if (response.getErrorInfo().isSuccessful()) {
             System.out.println("deleted");
         } else {
-            System.out.println("not deleted");
+            if (response.getErrorInfo().isFileNotExists()) {
+                System.out.println("File not exists");
+            } else if (response.getErrorInfo().isFileUnableToDelete()) {
+                System.out.println("File " + response.getErrorInfo().getErrorDetails() + " unable to delete");
+            } else {
+                System.out.println("Not deleted");
+            }
         }
     }
 
@@ -147,17 +152,5 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
                 Files.createDirectories(path);
             }
         }
-    }
-
-    private List<Path> listFiles(Path path, Path root, boolean recursive) throws IOException {
-        List<Path> result;
-        Path fullPath = root.resolve(path);
-        try (Stream<Path> walk = Files.walk(fullPath, recursive ? Integer.MAX_VALUE : 1)) {
-            result = walk
-                    .filter(Files::isRegularFile)
-                    .map(recursive ? fullPath::relativize : Path::getFileName)
-                    .collect(Collectors.toList());
-        }
-        return result;
     }
 }

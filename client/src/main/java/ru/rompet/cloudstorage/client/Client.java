@@ -11,7 +11,7 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import ru.rompet.cloudstorage.client.handler.ConsoleInputHandler;
-import ru.rompet.cloudstorage.client.handler.FileHandler;
+import ru.rompet.cloudstorage.client.handler.ResponseHandler;
 import ru.rompet.cloudstorage.client.handler.JsonDecoder;
 import ru.rompet.cloudstorage.client.handler.JsonEncoder;
 import ru.rompet.cloudstorage.common.Request;
@@ -47,7 +47,7 @@ public class Client{
                                     new ByteArrayEncoder(),
                                     new JsonDecoder(),
                                     new JsonEncoder(),
-                                    new FileHandler()
+                                    new ResponseHandler()
                             );
                         }
                     });

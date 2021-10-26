@@ -6,6 +6,8 @@ public class ErrorInfo implements Serializable {
     private boolean isSuccessful;
     private boolean isFileAlreadyExists;
     private boolean isFileNotExists;
+    private boolean isFileUnableToDelete;
+    private String ErrorDetails;
 
     public ErrorInfo() {
         setSuccessful(true);
@@ -33,5 +35,21 @@ public class ErrorInfo implements Serializable {
 
     public void setFileNotExists(boolean fileNotExists) {
         isFileNotExists = fileNotExists;
+    }
+
+    public boolean isFileUnableToDelete() {
+        return isFileUnableToDelete;
+    }
+
+    public void setFileUnableToDelete(boolean fileUnableToDelete) {
+        isFileUnableToDelete = fileUnableToDelete;
+    }
+
+    public String getErrorDetails() {
+        return ErrorDetails;
+    }
+
+    public void setErrorDetails(String errorDetails) {
+        ErrorDetails = errorDetails;
     }
 }

@@ -2,8 +2,10 @@ package ru.rompet.cloudstorage.server.domain.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.commons.io.FileUtils;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.data.DirectoryStructure;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 import ru.rompet.cloudstorage.server.dao.AuthenticationService;
 
@@ -17,7 +19,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class FileHandler extends SimpleChannelInboundHandler<Request> {
+public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private final int BUFFER_SIZE = 1024 * 512;
     private final String DEFAULT_FILE_LOCATION = "serverFiles\\";
 
@@ -39,12 +41,13 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
             if (Files.isRegularFile(path)) {
                 ctx.writeAndFlush(readPartFile(request));
             } else if (Files.isDirectory(path)) {
-                request.setFromPath(request.getFromPath() + "\\"); // can't do it on client side, because it can be file without extension
+                request.setFromPath(request.getFromPath() + "\\");
                 request.setToPath(request.getToPath() + "\\");
-                List<Path> filePaths = listFiles(
+                List<Path> filePaths = DirectoryStructure.listFiles(
                         Path.of(request.getFromPath()),
                         Path.of(DEFAULT_FILE_LOCATION),
-                        request.getParameters().contains(Parameter.R));
+                        request.hasParameter(Parameter.R),
+                        false); // relative path, because full destination path may not match full source path
                 for (Path filePath : filePaths) {
                     Request request1 = (Request) request.clone();
                     request1.setFromPath(request.getFromPath() + filePath.toString());
@@ -74,16 +77,40 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
         }
     }
 
-    private boolean delete(ChannelHandlerContext ctx, Request request) throws Exception {
+    private void delete(ChannelHandlerContext ctx, Request request) throws Exception {
+        Path path = Path.of(DEFAULT_FILE_LOCATION + request.getFromPath());
         File file = new File(DEFAULT_FILE_LOCATION + request.getFromPath());
         Response response = new Response(request);
-        if (file.delete()) {
-            ctx.writeAndFlush(response);
-            return true;
+        if (Files.exists(path)) {
+            if (Files.isRegularFile(path)) {
+                if (!file.delete()) {
+                    response.getErrorInfo().setSuccessful(false);
+                    response.getErrorInfo().setFileUnableToDelete(true);
+                }
+                ctx.writeAndFlush(response);
+            } else if (Files.isDirectory(path)) {
+                request.setFromPath(request.getFromPath() + "\\");
+                List<Path> filePaths = DirectoryStructure.listFiles(
+                        Path.of(request.getFromPath()),
+                        Path.of(DEFAULT_FILE_LOCATION),
+                        request.hasParameter(Parameter.R),
+                        true);
+                for (Path filePath : filePaths) {
+                    if (!canDelete(filePath.toString())) {
+                        response.getErrorInfo().setSuccessful(false);
+                        response.getErrorInfo().setFileUnableToDelete(true);
+                        response.getErrorInfo().setErrorDetails(filePath.toString());
+                        ctx.writeAndFlush(response);
+                        return;
+                    }
+                }
+                FileUtils.deleteDirectory(new File(DEFAULT_FILE_LOCATION + request.getFromPath()));
+                ctx.writeAndFlush(response);
+            }
         } else {
             response.getErrorInfo().setSuccessful(false);
+            response.getErrorInfo().setFileNotExists(true);
             ctx.writeAndFlush(response);
-            return false;
         }
     }
 
@@ -157,15 +184,8 @@ public class FileHandler extends SimpleChannelInboundHandler<Request> {
         }
     }
 
-    private List<Path> listFiles(Path path, Path root, boolean recursive) throws IOException {
-        List<Path> result;
-        Path fullPath = root.resolve(path);
-        try (Stream<Path> walk = Files.walk(fullPath, recursive ? Integer.MAX_VALUE : 1)) {
-            result = walk
-                    .filter(Files::isRegularFile)
-                    .map(recursive ? fullPath::relativize : Path::getFileName)
-                    .collect(Collectors.toList());
-        }
-        return result;
+    private boolean canDelete(String path) {
+        File file = new File(path);
+        return file.renameTo(file);
     }
 }

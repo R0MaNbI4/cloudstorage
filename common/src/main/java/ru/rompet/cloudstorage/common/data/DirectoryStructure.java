@@ -40,6 +40,19 @@ public class DirectoryStructure implements Iterable<DirectoryStructureEntry> {
         return result;
     }
 
+    public static List<Path> listFiles(Path path, Path root, boolean recursive, boolean fullPath) throws IOException {
+        List<Path> result;
+        Path fullPath1 = root.resolve(path);
+        try (Stream<Path> walk = Files.walk(fullPath1, recursive ? Integer.MAX_VALUE : 1)) {
+            result = walk
+                    .filter(Files::isRegularFile)
+                    .map(recursive ? fullPath1::relativize : Path::getFileName)
+                    .map(fullPath ? fullPath1::resolve : x -> x)
+                    .collect(Collectors.toList());
+        }
+        return result;
+    }
+
     @Override
     public Iterator<DirectoryStructureEntry> iterator() {
         return new CustomIterator();

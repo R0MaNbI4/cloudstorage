@@ -77,6 +77,10 @@ public class Message implements Serializable, Cloneable {
         this.authenticated = authenticated;
     }
 
+    public boolean hasParameter(Parameter parameter) {
+        return parameters.contains(parameter);
+    }
+
     public ArrayList<Parameter> getParameters() {
         return parameters;
     }
