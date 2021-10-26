@@ -6,10 +6,15 @@ import ru.rompet.cloudstorage.client.Client;
 import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class FileHandler extends SimpleChannelInboundHandler<Response> {
     private final int BUFFER_SIZE = 1024 * 512;
@@ -44,7 +49,27 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
     }
 
     private void save(ChannelHandlerContext ctx, Response response) throws Exception {
-        ctx.writeAndFlush(readPartFile(response));
+        Path path = Path.of(DEFAULT_FILE_LOCATION + response.getFromPath());
+        if (Files.exists(path)) {
+            if (Files.isRegularFile(path)) {
+                ctx.writeAndFlush(readPartFile(response));
+            } else if (Files.isDirectory(path)) {
+                response.setFromPath(response.getFromPath() + "\\");
+                response.setToPath(response.getToPath() + "\\");
+                List<Path> filePaths = listFiles(
+                        Path.of(response.getFromPath()),
+                        Path.of(DEFAULT_FILE_LOCATION),
+                        response.getParameters().contains(Parameter.R));
+                for (Path filePath : filePaths) {
+                    Request request = new Request(response);
+                    request.setFromPath(response.getFromPath() + filePath.toString());
+                    request.setToPath(response.getToPath() + filePath.toString());
+                    ctx.writeAndFlush(request);
+                }
+            }
+        } else {
+            System.out.println("File is not exists");
+        }
     }
 
     private void delete(ChannelHandlerContext ctx, Response response) throws Exception {
@@ -99,7 +124,10 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
                 DEFAULT_FILE_LOCATION + response.getFromPath(), "r")) {
             accessFile.seek(response.getPartFileInfo().getPosition());
             int read = accessFile.read(buffer);
-            if (read < buffer.length - 1) {
+            if (read == -1) {
+                request.getPartFileInfo().setFile(new byte[0]);
+                request.getPartFileInfo().setLastPart(true);
+            } else if (read < buffer.length - 1) {
                 byte[] tempBuffer = new byte[read];
                 System.arraycopy(buffer, 0, tempBuffer, 0, read);
                 request.getPartFileInfo().setFile(tempBuffer);
@@ -119,5 +147,17 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
                 Files.createDirectories(path);
             }
         }
+    }
+
+    private List<Path> listFiles(Path path, Path root, boolean recursive) throws IOException {
+        List<Path> result;
+        Path fullPath = root.resolve(path);
+        try (Stream<Path> walk = Files.walk(fullPath, recursive ? Integer.MAX_VALUE : 1)) {
+            result = walk
+                    .filter(Files::isRegularFile)
+                    .map(recursive ? fullPath::relativize : Path::getFileName)
+                    .collect(Collectors.toList());
+        }
+        return result;
     }
 }

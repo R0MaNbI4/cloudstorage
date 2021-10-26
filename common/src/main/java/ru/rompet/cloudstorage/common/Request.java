@@ -4,7 +4,7 @@ import ru.rompet.cloudstorage.common.enums.Command;
 
 import java.io.Serializable;
 
-public class Request extends Message implements Serializable, Cloneable
+public class Request extends Message implements Serializable
 {
     private Request(){}
 
@@ -14,10 +14,6 @@ public class Request extends Message implements Serializable, Cloneable
 
     public Request(Response response) {
         super(response);
-    }
-
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
     }
 
     public boolean hasData() {
