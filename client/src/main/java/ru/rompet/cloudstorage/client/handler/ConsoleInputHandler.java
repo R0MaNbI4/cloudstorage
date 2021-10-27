@@ -18,6 +18,10 @@ public class ConsoleInputHandler {
     boolean isValidCommand;
     boolean isValidCredentials;
     boolean isValidPath;
+    private final String[] restrictedDirectoryName = {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
 
     public ConsoleInputHandler() {
         parameters = new ArrayList<>();
@@ -129,6 +133,23 @@ public class ConsoleInputHandler {
             login = args[1 + parameters.size()];
             password = args[2 + parameters.size()];
         } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
+        return isValidDirectoryName(login);
+    }
+
+    private boolean isValidDirectoryName(String name) {
+        try {
+            Path.of(name);
+        } catch (InvalidPathException e) {
+            return false;
+        }
+        for (int i = 0; i < restrictedDirectoryName.length; i++) {
+            if (name.toUpperCase().equals(restrictedDirectoryName[i])) {
+                return false;
+            }
+        }
+        if (name.endsWith(".") || name.endsWith(" ")) {
             return false;
         }
         return true;

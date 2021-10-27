@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 
 public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private final int BUFFER_SIZE = 1024 * 512;
-    private final String DEFAULT_FILE_LOCATION = "serverFiles\\";
+    private String rootDirectory;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
@@ -36,18 +36,14 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void load(ChannelHandlerContext ctx, Request request) throws Exception {
-        Path path = Path.of(DEFAULT_FILE_LOCATION + request.getFromPath());
+        Path path = Path.of(rootDirectory + request.getFromPath());
         if (Files.exists(path)) {
             if (Files.isRegularFile(path)) {
                 ctx.writeAndFlush(readPartFile(request));
             } else if (Files.isDirectory(path)) {
                 request.setFromPath(request.getFromPath() + "\\");
                 request.setToPath(request.getToPath() + "\\");
-                List<Path> filePaths = DirectoryStructure.listFiles(
-                        Path.of(request.getFromPath()),
-                        Path.of(DEFAULT_FILE_LOCATION),
-                        request.hasParameter(Parameter.R),
-                        false); // relative path, because full destination path may not match full source path
+                List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, false); // relative path, because full destination path may not match full source path
                 for (Path filePath : filePaths) {
                     Request request1 = (Request) request.clone();
                     request1.setFromPath(request.getFromPath() + filePath.toString());
@@ -78,8 +74,8 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void delete(ChannelHandlerContext ctx, Request request) throws Exception {
-        Path path = Path.of(DEFAULT_FILE_LOCATION + request.getFromPath());
-        File file = new File(DEFAULT_FILE_LOCATION + request.getFromPath());
+        Path path = Path.of(rootDirectory + request.getFromPath());
+        File file = new File(rootDirectory + request.getFromPath());
         Response response = new Response(request);
         if (Files.exists(path)) {
             if (Files.isRegularFile(path)) {
@@ -90,11 +86,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                 ctx.writeAndFlush(response);
             } else if (Files.isDirectory(path)) {
                 request.setFromPath(request.getFromPath() + "\\");
-                List<Path> filePaths = DirectoryStructure.listFiles(
-                        Path.of(request.getFromPath()),
-                        Path.of(DEFAULT_FILE_LOCATION),
-                        request.hasParameter(Parameter.R),
-                        true);
+                List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, true);
                 for (Path filePath : filePaths) {
                     if (!canDelete(filePath.toString())) {
                         response.getErrorInfo().setSuccessful(false);
@@ -104,7 +96,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                         return;
                     }
                 }
-                FileUtils.deleteDirectory(new File(DEFAULT_FILE_LOCATION + request.getFromPath()));
+                FileUtils.deleteDirectory(new File(rootDirectory + request.getFromPath()));
                 ctx.writeAndFlush(response);
             }
         } else {
@@ -117,7 +109,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private void dir(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
         try {
-            response.getDirectoryStructure().scan(DEFAULT_FILE_LOCATION + request.getFromPath());
+            response.getDirectoryStructure().scan(rootDirectory + request.getFromPath());
         } catch (NoSuchFileException e) {
             response.getErrorInfo().setSuccessful(false);
             response.getErrorInfo().setFileNotExists(true);
@@ -125,7 +117,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         ctx.writeAndFlush(response);
     }
 
-    private void auth(ChannelHandlerContext ctx, Request request) {
+    private void auth(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
         response.setAuthenticated(
                 AuthenticationService.auth(
@@ -133,6 +125,10 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                         request.getCredentials().getPassword()
                 )
         );
+        rootDirectory = request.getCredentials().getLogin() + "\\";
+        if (!Files.exists(Path.of(rootDirectory))) {
+            Files.createDirectory(Path.of(rootDirectory));
+        }
         ctx.writeAndFlush(response);
     }
 
@@ -150,7 +146,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         response.getPartFileInfo().setPosition(request);
         byte[] buffer = new byte[BUFFER_SIZE];
         try (RandomAccessFile accessFile =
-                     new RandomAccessFile(DEFAULT_FILE_LOCATION + request.getFromPath(), "r")) {
+                     new RandomAccessFile(rootDirectory + request.getFromPath(), "r")) {
             accessFile.seek(request.getPartFileInfo().getPosition());
             int read = accessFile.read(buffer);
             if (read == -1) {
@@ -171,14 +167,14 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
 
     private void writePartFile(Request request) throws Exception {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(
-                DEFAULT_FILE_LOCATION + request.getToPath(), "rw")) {
+                rootDirectory + request.getToPath(), "rw")) {
             randomAccessFile.seek(request.getPartFileInfo().getPosition());
             randomAccessFile.write(request.getPartFileInfo().getFile());
         }
     }
 
     private void createDirectoryIfNotExists(Request request) throws Exception {
-        Path path = Path.of(DEFAULT_FILE_LOCATION + request.getToPath()).getParent();
+        Path path = Path.of(rootDirectory + request.getToPath()).getParent();
         if (Files.notExists(path)) {
             Files.createDirectories(path);
         }

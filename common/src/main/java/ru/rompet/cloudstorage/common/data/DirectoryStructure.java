@@ -1,6 +1,8 @@
 package ru.rompet.cloudstorage.common.data;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import ru.rompet.cloudstorage.common.Message;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -40,8 +42,11 @@ public class DirectoryStructure implements Iterable<DirectoryStructureEntry> {
         return result;
     }
 
-    public static List<Path> listFiles(Path path, Path root, boolean recursive, boolean fullPath) throws IOException {
+    public static List<Path> listFiles(Message message, String rootPath, boolean fullPath) throws IOException {
         List<Path> result;
+        Path path = Path.of(message.getFromPath());
+        Path root = Path.of(rootPath);
+        boolean recursive = message.hasParameter(Parameter.R);
         Path fullPath1 = root.resolve(path);
         try (Stream<Path> walk = Files.walk(fullPath1, recursive ? Integer.MAX_VALUE : 1)) {
             result = walk

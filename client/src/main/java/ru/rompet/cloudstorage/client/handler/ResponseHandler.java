@@ -54,11 +54,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
             } else if (Files.isDirectory(path)) {
                 response.setFromPath(response.getFromPath() + "\\");
                 response.setToPath(response.getToPath() + "\\");
-                List<Path> filePaths = DirectoryStructure.listFiles(
-                        Path.of(response.getFromPath()),
-                        Path.of(DEFAULT_FILE_LOCATION),
-                        response.hasParameter(Parameter.R),
-                        false);
+                List<Path> filePaths = DirectoryStructure.listFiles(response, DEFAULT_FILE_LOCATION, false);
                 for (Path filePath : filePaths) {
                     Request request = new Request(response);
                     request.setFromPath(response.getFromPath() + filePath.toString());
