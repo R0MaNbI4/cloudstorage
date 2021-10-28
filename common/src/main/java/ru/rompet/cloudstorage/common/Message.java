@@ -88,4 +88,9 @@ public class Message implements Serializable, Cloneable {
     public void setParameters(ArrayList<Parameter> parameters) {
         this.parameters = parameters;
     }
+
+    public void addToPaths(String str) {
+        fromPath = fromPath + str;
+        toPath = toPath + str;
+    }
 }

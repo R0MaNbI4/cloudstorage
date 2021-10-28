@@ -26,6 +26,9 @@ public class ErrorInfo implements Serializable {
     }
 
     public void setFileAlreadyExists(boolean fileAlreadyExists) {
+        if (fileAlreadyExists) {
+            isSuccessful = false;
+        }
         isFileAlreadyExists = fileAlreadyExists;
     }
 
@@ -34,6 +37,9 @@ public class ErrorInfo implements Serializable {
     }
 
     public void setFileNotExists(boolean fileNotExists) {
+        if (fileNotExists) {
+            isSuccessful = false;
+        }
         isFileNotExists = fileNotExists;
     }
 
@@ -42,6 +48,9 @@ public class ErrorInfo implements Serializable {
     }
 
     public void setFileUnableToDelete(boolean fileUnableToDelete) {
+        if (fileUnableToDelete) {
+            isSuccessful = false;
+        }
         isFileUnableToDelete = fileUnableToDelete;
     }
 
