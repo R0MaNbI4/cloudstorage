@@ -125,7 +125,8 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                 DEFAULT_FILE_LOCATION + response.getFromPath(), "r")) {
             accessFile.seek(response.getPartFileInfo().getPosition());
             int read = accessFile.read(buffer);
-            if (read == -1) {
+            if (read == -1) { // if the file size is 0 or a multiple of the buffer size
+                System.out.println(response.getFromPath());
                 request.getPartFileInfo().setFile(new byte[0]);
                 request.getPartFileInfo().setLastPart(true);
             } else if (read < buffer.length - 1) {

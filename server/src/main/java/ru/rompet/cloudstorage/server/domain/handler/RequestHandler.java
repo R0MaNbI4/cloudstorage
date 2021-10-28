@@ -96,7 +96,13 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                         return;
                     }
                 }
-                FileUtils.deleteDirectory(new File(rootDirectory + request.getFromPath()));
+                if (request.hasParameter(Parameter.R)) {
+                    FileUtils.deleteDirectory(new File(rootDirectory + request.getFromPath()));
+                } else {
+                    for (Path filePath : filePaths) {
+                        Files.delete(filePath);
+                    }
+                }
                 ctx.writeAndFlush(response);
             }
         } else {

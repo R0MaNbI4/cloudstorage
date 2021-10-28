@@ -17,6 +17,7 @@ public class Request extends Message implements Serializable
     }
 
     public boolean hasData() {
-        return !(getPartFileInfo().getFile() == null || getPartFileInfo().getFile().length == 0);
+        return !(getPartFileInfo().getFile() == null
+                || (getPartFileInfo().getFile().length == 0 && !getPartFileInfo().isLastPart()));
     }
 }
