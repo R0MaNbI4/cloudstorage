@@ -7,6 +7,7 @@ import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class Message implements Serializable, Cloneable {
     private boolean authenticated;
@@ -25,6 +26,7 @@ public class Message implements Serializable, Cloneable {
     protected Message(Message message) {
         this();
         this.command = message.getCommand();
+        //Collections.copy(this.parameters, message.getParameters());
         this.parameters = message.getParameters();
         this.fromPath = message.getFromPath();
         this.toPath = message.getToPath();
@@ -79,6 +81,10 @@ public class Message implements Serializable, Cloneable {
 
     public boolean hasParameter(Parameter parameter) {
         return parameters.contains(parameter);
+    }
+
+    public boolean removeParameter(Parameter parameter) {
+        return parameters.remove(parameter);
     }
 
     public ArrayList<Parameter> getParameters() {

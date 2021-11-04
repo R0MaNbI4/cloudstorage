@@ -8,10 +8,14 @@ import ru.rompet.cloudstorage.common.data.DirectoryStructure;
 import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.enums.Parameter;
+
 import static ru.rompet.cloudstorage.common.IO.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
@@ -49,20 +53,32 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
 
     private void save(ChannelHandlerContext ctx, Response response) throws Exception {
         Path path = Path.of(DEFAULT_FILE_LOCATION + response.getFromPath());
-        if (Files.exists(path)) {
-            if (Files.isRegularFile(path)) {
-                ctx.writeAndFlush(readPartFile(response, DEFAULT_FILE_LOCATION));
-            } else if (Files.isDirectory(path)) {
-                response.addToPaths("\\");
-                List<Path> filePaths = DirectoryStructure.listFiles(response, DEFAULT_FILE_LOCATION, false);
-                for (Path filePath : filePaths) {
-                    Request request = new Request(response);
-                    request.addToPaths(filePath.toString());
-                    ctx.writeAndFlush(request);
-                }
-            }
+        if (response.getErrorInfo().isFileAlreadyExists()) {
+            System.out.println("File already exists\nUse parameter -rw to rewrite file or -rn to save file with a different name");
         } else {
-            System.out.println("File is not exists");
+            if (Files.exists(path)) {
+                if (Files.isRegularFile(path)) {
+                    if (response.hasParameter(Parameter.RN) && response.getPartFileInfo().isFirstPart()) {
+                        response.setToPath(rename(response.getToPath(), true));
+                    }
+                    Request request = (Request) readPartFile(response, DEFAULT_FILE_LOCATION);
+                    ctx.writeAndFlush(request);
+                } else if (Files.isDirectory(path)) {
+                    if (response.hasParameter(Parameter.RN)) {
+                        response.setToPath(rename(response.getToPath(), false));
+                        response.removeParameter(Parameter.RN);
+                    }
+                    response.addToPaths("\\");
+                    List<Path> filePaths = DirectoryStructure.listFiles(response, DEFAULT_FILE_LOCATION, false);
+                    for (Path filePath : filePaths) {
+                        Request request = new Request(response);
+                        request.addToPaths(filePath.toString());
+                        ctx.writeAndFlush(request);
+                    }
+                }
+            } else {
+                System.out.println("File is not exists");
+            }
         }
     }
 

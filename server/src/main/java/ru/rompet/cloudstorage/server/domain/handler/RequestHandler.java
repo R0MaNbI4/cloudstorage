@@ -54,15 +54,22 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void save(ChannelHandlerContext ctx, Request request) throws Exception {
-        if (!request.hasData()) { // first initial request
-            ctx.writeAndFlush(new Response(request));
-            createDirectoryIfNotExists(request, rootDirectory);
+        Response response = new Response(request);
+        if (Files.exists(Path.of(rootDirectory + request.getToPath()))
+                && !(request.hasParameter(Parameter.RW) || request.hasParameter(Parameter.RN))
+                && request.getPartFileInfo().isFirstPart()) {
+            response.getErrorInfo().setFileAlreadyExists(true);
+            ctx.writeAndFlush(response);
         } else {
-            writePartFile(request, rootDirectory);
-            if (!request.getPartFileInfo().isLastPart()) {
-                Response response = new Response(request);
-                response.getPartFileInfo().addPosition(request, BUFFER_SIZE);
-                ctx.writeAndFlush(response);
+            if (!request.hasData()) { // first initial request
+                ctx.writeAndFlush(new Response(request));
+                createDirectoryIfNotExists(request, rootDirectory);
+            } else {
+                writePartFile(request, rootDirectory);
+                if (!request.getPartFileInfo().isLastPart()) {
+                    response.getPartFileInfo().addPosition(request, BUFFER_SIZE);
+                    ctx.writeAndFlush(response);
+                }
             }
         }
     }

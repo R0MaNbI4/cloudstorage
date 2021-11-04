@@ -50,4 +50,52 @@ public class IO {
             Files.createDirectories(path);
         }
     }
+
+    public static String rename(String name, boolean isFile) {
+        StringBuilder sb = new StringBuilder();
+        int number;
+        boolean hasNumber = isFile && name.matches("^.+\\s\\(\\d+\\)\\..+$"); // check number if is file
+        hasNumber = hasNumber || name.matches("^.+\\s\\(\\d+\\)$"); // check number anyway
+        boolean hasExtension = isFile && name.matches("^.+\\..+$");
+        number = hasNumber ? incrementNameNumber(getNameNumber(name, hasExtension)) : 1;
+        sb.append(getNameWithoutNumber(name, hasNumber, hasExtension))
+                .append(" (").append(number).append(")")
+                .append(getExtension(name, hasExtension));
+        return sb.toString();
+    }
+
+    private static int getNameNumber(String name, boolean hasExtension) {
+        String number;
+        if (hasExtension) {
+            number = name.substring(name.lastIndexOf(" ") + 1, name.lastIndexOf(".") - 1);
+        } else {
+            number = name.substring(name.lastIndexOf(" ") + 1);
+        }
+        number = number.replaceAll("[(,)]","");
+        return Integer.parseInt(number);
+    }
+
+    private static int incrementNameNumber(int number) {
+        if (number == Integer.MAX_VALUE) {
+            return 1;
+        } else {
+            return ++number;
+        }
+    }
+
+    private static String getNameWithoutNumber(String name, boolean hasNumber, boolean hasExtension) {
+        if (hasNumber) {
+            return name.substring(0, name.lastIndexOf(" ")); // test (1) or test (1).txt
+        } else {
+            if (hasExtension) {
+                return name.substring(0, name.lastIndexOf(".")); // test.txt
+            } else {
+                return name; // test
+            }
+        }
+    }
+
+    private static String getExtension(String name, boolean hasExtension) {
+        return hasExtension ? name.substring(name.lastIndexOf(".")) : "";
+    }
 }
