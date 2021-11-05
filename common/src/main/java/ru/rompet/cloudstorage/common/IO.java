@@ -44,7 +44,7 @@ public class IO {
         return message1;
     }
 
-    public static void createDirectoryIfNotExists(Message message, String rootDirectory) throws Exception {
+    public static void createParentDirectories(Message message, String rootDirectory) throws Exception {
         Path path = Path.of(rootDirectory + message.getToPath()).getParent();
         if (Files.notExists(path)) {
             Files.createDirectories(path);

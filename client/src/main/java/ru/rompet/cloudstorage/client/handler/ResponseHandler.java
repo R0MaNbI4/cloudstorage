@@ -3,7 +3,6 @@ package ru.rompet.cloudstorage.client.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import ru.rompet.cloudstorage.client.Client;
-import ru.rompet.cloudstorage.common.IO;
 import ru.rompet.cloudstorage.common.data.DirectoryStructure;
 import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
@@ -14,8 +13,6 @@ import static ru.rompet.cloudstorage.common.IO.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
@@ -27,6 +24,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
             case LOAD -> load(ctx, response);
             case SAVE -> save(ctx, response);
             case DELETE -> delete(ctx, response);
+            case CREATE -> create(ctx, response);
             case DIR -> dir(ctx, response);
             case AUTH -> auth(ctx, response);
             case REGISTER -> register(ctx, response);
@@ -36,7 +34,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
     private void load(ChannelHandlerContext ctx, Response response) throws Exception {
         if (response.getErrorInfo().isSuccessful()) {
             if (response.getPartFileInfo().isFirstPart()) {
-                createDirectoryIfNotExists(response, DEFAULT_FILE_LOCATION);
+                createParentDirectories(response, DEFAULT_FILE_LOCATION);
             }
             writePartFile(response, DEFAULT_FILE_LOCATION);
             if (!response.getPartFileInfo().isLastPart()) {
@@ -93,6 +91,16 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
             } else {
                 System.out.println("Not deleted");
             }
+        }
+    }
+
+    private void create(ChannelHandlerContext ctx, Response response) throws Exception {
+        if (!response.getErrorInfo().isSuccessful()) {
+            if (response.getErrorInfo().isFileNotExists()) {
+                System.out.println("You can create only one directory");
+            }
+        } else {
+            System.out.println("Successful");
         }
     }
 

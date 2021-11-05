@@ -26,6 +26,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
             case LOAD -> load(ctx, request);
             case SAVE -> save(ctx, request);
             case DELETE -> delete(ctx, request);
+            case CREATE -> create(ctx, request);
             case DIR -> dir(ctx, request);
             case AUTH -> auth(ctx, request);
             case REGISTER -> register(ctx, request);
@@ -63,7 +64,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         } else {
             if (!request.hasData()) { // first initial request
                 ctx.writeAndFlush(new Response(request));
-                createDirectoryIfNotExists(request, rootDirectory);
+                createParentDirectories(request, rootDirectory);
             } else {
                 writePartFile(request, rootDirectory);
                 if (!request.getPartFileInfo().isLastPart()) {
@@ -94,6 +95,21 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
             }
         } else {
             response.getErrorInfo().setFileNotExists(true);
+        }
+        ctx.writeAndFlush(response);
+    }
+
+    private void create(ChannelHandlerContext ctx, Request request) throws Exception {
+        Response response = new Response(request);
+        Path path = Path.of(rootDirectory + request.getToPath());
+        if (!Files.exists(path.getParent())) {
+            response.getErrorInfo().setFileNotExists(true);
+        } else {
+            while (Files.exists(path)) {
+                request.setToPath(rename(request.getToPath(), false));
+                path = Path.of(rootDirectory + request.getToPath());
+            }
+            Files.createDirectory(Path.of(rootDirectory + request.getToPath()));
         }
         ctx.writeAndFlush(response);
     }
