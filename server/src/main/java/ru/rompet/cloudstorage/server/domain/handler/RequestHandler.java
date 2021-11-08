@@ -27,6 +27,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
             case SAVE -> save(ctx, request);
             case DELETE -> delete(ctx, request);
             case CREATE -> create(ctx, request);
+            case MOVE -> move(ctx, request);
             case DIR -> dir(ctx, request);
             case AUTH -> auth(ctx, request);
             case REGISTER -> register(ctx, request);
@@ -103,7 +104,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         Response response = new Response(request);
         Path path = Path.of(rootDirectory + request.getToPath());
         if (!Files.exists(path.getParent())) {
-            response.getErrorInfo().setFileNotExists(true);
+            response.getErrorInfo().setPathNotExists(true);
         } else {
             while (Files.exists(path)) {
                 request.setToPath(rename(request.getToPath(), false));
@@ -114,12 +115,52 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         ctx.writeAndFlush(response);
     }
 
+    private void move(ChannelHandlerContext ctx, Request request) throws Exception {
+        Response response = new Response(request);
+        if (!Files.exists(Path.of(rootDirectory + request.getFromPath()))) {
+            response.getErrorInfo().setFileNotExists(true);
+        }
+        if (!Files.exists(Path.of(rootDirectory + request.getToPath()))) {
+            response.getErrorInfo().setPathNotExists(true);
+        }
+        String relativePath = Path.of(request.getFromPath()).relativize(Path.of(request.getToPath())).toString();
+        if (!relativePath.equals("") && !relativePath.startsWith("..")) {
+            response.getErrorInfo().setWrongPath(true);
+        }
+        if (!response.getErrorInfo().isSuccessful()) {
+            ctx.writeAndFlush(response);
+            return;
+        }
+
+        String srcString = rootDirectory + request.getFromPath();
+        Path srcPath = Path.of(srcString);
+        File srcFile = new File(srcString);
+        File dstFile = new File(rootDirectory + request.getToPath() + "\\" + request.getFromPath());
+        if (Files.isRegularFile(srcPath)) {
+            if (canDeleteFile(srcString)) {
+                FileUtils.copyFile(srcFile, dstFile);
+                FileUtils.delete(srcFile);
+            } else {
+                response.getErrorInfo().setFileUnableToDelete(true);
+            }
+        }
+        if (Files.isDirectory(srcPath)){
+            request.addToPaths("\\");
+            List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, true);
+            if (canDeleteFiles(filePaths)) {
+                FileUtils.copyDirectory(srcFile, dstFile);
+                FileUtils.deleteDirectory(srcFile);
+            }
+        }
+        ctx.writeAndFlush(response);
+    }
+
     private void dir(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
         try {
             response.getDirectoryStructure().scan(rootDirectory + request.getFromPath());
         } catch (NoSuchFileException e) {
-            response.getErrorInfo().setFileNotExists(true);
+            response.getErrorInfo().setPathNotExists(true);
         }
         ctx.writeAndFlush(response);
     }
@@ -154,6 +195,9 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private boolean canDeleteFiles(List<Path> filePaths) {
+        if (filePaths.isEmpty()) {
+            return true;
+        }
         for (Path filePath : filePaths) {
             if (!canDeleteFile(filePath.toString())) {
                 return false;

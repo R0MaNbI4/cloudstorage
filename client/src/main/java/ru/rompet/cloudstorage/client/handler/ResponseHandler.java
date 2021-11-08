@@ -13,6 +13,7 @@ import static ru.rompet.cloudstorage.common.IO.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.SQLOutput;
 import java.util.List;
 
 public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
@@ -25,6 +26,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
             case SAVE -> save(ctx, response);
             case DELETE -> delete(ctx, response);
             case CREATE -> create(ctx, response);
+            case MOVE -> move(ctx, response);
             case DIR -> dir(ctx, response);
             case AUTH -> auth(ctx, response);
             case REGISTER -> register(ctx, response);
@@ -96,8 +98,24 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
 
     private void create(ChannelHandlerContext ctx, Response response) throws Exception {
         if (!response.getErrorInfo().isSuccessful()) {
+            if (response.getErrorInfo().isPathNotExists()) {
+                System.out.println("Path is not exists. You can create only one directory");
+            }
+        } else {
+            System.out.println("Successful");
+        }
+    }
+
+    private void move(ChannelHandlerContext ctx, Response response) throws Exception {
+        if (!response.getErrorInfo().isSuccessful()) {
             if (response.getErrorInfo().isFileNotExists()) {
-                System.out.println("You can create only one directory");
+                System.out.println("Source file or directory not exists");
+            } else if (response.getErrorInfo().isPathNotExists()) {
+                System.out.println("Destination directory not exists");
+            } else if (response.getErrorInfo().isWrongPath()) {
+                System.out.println("You can't specify same paths or move directory to it's subdirectory ");
+            } else if (response.getErrorInfo().isFileUnableToDelete()) {
+                System.out.println("Unable to delete file");
             }
         } else {
             System.out.println("Successful");
@@ -109,7 +127,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
             for (DirectoryStructureEntry entry : response.getDirectoryStructure()) {
                 System.out.println(entry.getName() + "\t" + entry.getSizeInBytes() + "\t" + entry.isDirectory());
             }
-        } else if (response.getErrorInfo().isFileNotExists()) {
+        } else if (response.getErrorInfo().isPathNotExists()) {
             System.out.println("Path is not exists");
         }
     }

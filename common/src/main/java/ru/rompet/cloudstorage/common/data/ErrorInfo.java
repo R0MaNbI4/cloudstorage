@@ -6,6 +6,8 @@ public class ErrorInfo implements Serializable {
     private boolean isSuccessful;
     private boolean isFileAlreadyExists;
     private boolean isFileNotExists;
+    private boolean isPathNotExists;
+    private boolean isWrongPath;
     private boolean isFileUnableToDelete;
     private String ErrorDetails;
 
@@ -41,6 +43,28 @@ public class ErrorInfo implements Serializable {
             isSuccessful = false;
         }
         isFileNotExists = fileNotExists;
+    }
+
+    public boolean isPathNotExists() {
+        return isPathNotExists;
+    }
+
+    public void setPathNotExists(boolean pathNotExists) {
+        if (pathNotExists) {
+            isSuccessful = false;
+        }
+        isPathNotExists = pathNotExists;
+    }
+
+    public boolean isWrongPath() {
+        return isWrongPath;
+    }
+
+    public void setWrongPath(boolean wrongPath) {
+        if (wrongPath) {
+            isSuccessful = false;
+        }
+        isWrongPath = wrongPath;
     }
 
     public boolean isFileUnableToDelete() {
