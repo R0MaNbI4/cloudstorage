@@ -87,6 +87,10 @@ public class Message implements Serializable, Cloneable {
         return parameters.remove(parameter);
     }
 
+    public void addParameter(Parameter parameter) {
+        parameters.add(parameter);
+    }
+
     public ArrayList<Parameter> getParameters() {
         return parameters;
     }

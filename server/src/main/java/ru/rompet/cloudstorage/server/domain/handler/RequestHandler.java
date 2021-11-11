@@ -46,6 +46,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                     Request request1 = (Request) request.clone();
                     request1.addToPaths(filePath.toString());
                     ctx.writeAndFlush(readPartFile(request1, rootDirectory));
+                    System.out.println(request1.getToPath());
                 }
             }
         } else {
@@ -64,8 +65,14 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
             ctx.writeAndFlush(response);
         } else {
             if (!request.hasData()) { // first initial request
-                ctx.writeAndFlush(new Response(request));
-                createParentDirectories(request, rootDirectory);
+                if (!isPathExists(request, rootDirectory)) {
+                    if (request.hasParameter(Parameter.CD)) {
+                        createParentDirectories(request, rootDirectory);
+                    } else {
+                        response.getErrorInfo().setPathNotExists(true);
+                    }
+                }
+                ctx.writeAndFlush(response);
             } else {
                 writePartFile(request, rootDirectory);
                 if (!request.getPartFileInfo().isLastPart()) {
@@ -103,14 +110,18 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private void create(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
         Path path = Path.of(rootDirectory + request.getToPath());
-        if (!Files.exists(path.getParent())) {
-            response.getErrorInfo().setPathNotExists(true);
+        if (request.hasParameter(Parameter.R)) {
+            Files.createDirectories(path);
         } else {
-            while (Files.exists(path)) {
-                request.setToPath(rename(request.getToPath(), false));
-                path = Path.of(rootDirectory + request.getToPath());
+            if (!Files.exists(path.getParent())) {
+                response.getErrorInfo().setPathNotExists(true);
+            } else {
+                while (Files.exists(path)) {
+                    request.setToPath(rename(request.getToPath(), false));
+                    path = Path.of(rootDirectory + request.getToPath());
+                }
+                Files.createDirectory(path);
             }
-            Files.createDirectory(Path.of(rootDirectory + request.getToPath()));
         }
         ctx.writeAndFlush(response);
     }
@@ -120,8 +131,12 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         if (!Files.exists(Path.of(rootDirectory + request.getFromPath()))) {
             response.getErrorInfo().setFileNotExists(true);
         }
-        if (!Files.exists(Path.of(rootDirectory + request.getToPath()))) {
-            response.getErrorInfo().setPathNotExists(true);
+        if (!isPathExists(request, rootDirectory)) {
+            if (request.hasParameter(Parameter.CD)) {
+                createParentDirectories(request, rootDirectory);
+            } else {
+                response.getErrorInfo().setPathNotExists(true);
+            }
         }
         String relativePath = Path.of(request.getFromPath()).relativize(Path.of(request.getToPath())).toString();
         if (!relativePath.equals("") && !relativePath.startsWith("..")) {
@@ -135,7 +150,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         String srcString = rootDirectory + request.getFromPath();
         Path srcPath = Path.of(srcString);
         File srcFile = new File(srcString);
-        File dstFile = new File(rootDirectory + request.getToPath() + "\\" + request.getFromPath());
+        File dstFile = new File(rootDirectory + request.getToPath());
         if (Files.isRegularFile(srcPath)) {
             if (canDeleteFile(srcString)) {
                 FileUtils.copyFile(srcFile, dstFile);

@@ -53,9 +53,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
 
     private void save(ChannelHandlerContext ctx, Response response) throws Exception {
         Path path = Path.of(DEFAULT_FILE_LOCATION + response.getFromPath());
-        if (response.getErrorInfo().isFileAlreadyExists()) {
-            System.out.println("File already exists\nUse parameter -rw to rewrite file or -rn to save file with a different name");
-        } else {
+        if (response.getErrorInfo().isSuccessful()) {
             if (Files.exists(path)) {
                 if (Files.isRegularFile(path)) {
                     if (response.hasParameter(Parameter.RN) && response.getPartFileInfo().isFirstPart()) {
@@ -64,6 +62,9 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                     Request request = (Request) readPartFile(response, DEFAULT_FILE_LOCATION);
                     ctx.writeAndFlush(request);
                 } else if (Files.isDirectory(path)) {
+                    if (!response.hasParameter(Parameter.CD)) {
+                        response.addParameter(Parameter.CD);
+                    }
                     if (response.hasParameter(Parameter.RN)) {
                         response.setToPath(rename(response.getToPath(), false));
                         response.removeParameter(Parameter.RN);
@@ -78,6 +79,12 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                 }
             } else {
                 System.out.println("File is not exists");
+            }
+        } else {
+            if (response.getErrorInfo().isFileAlreadyExists()) {
+                System.out.println("File already exists\nUse parameter -rw to rewrite file or -rn to save file with a different name");
+            } else if (response.getErrorInfo().isPathNotExists()) {
+                System.out.println("Path is not exists. Use parameter -cd to create all necessary directories");
             }
         }
     }

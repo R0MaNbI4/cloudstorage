@@ -1,5 +1,7 @@
 package ru.rompet.cloudstorage.common;
 
+import ru.rompet.cloudstorage.common.enums.Parameter;
+
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,6 +51,11 @@ public class IO {
         if (Files.notExists(path)) {
             Files.createDirectories(path);
         }
+    }
+
+    public static boolean isPathExists(Message message, String rootDirectory) throws Exception {
+        Path path = Path.of(rootDirectory + message.getToPath()).getParent();
+        return Files.exists(path);
     }
 
     public static String rename(String name, boolean isFile) {
