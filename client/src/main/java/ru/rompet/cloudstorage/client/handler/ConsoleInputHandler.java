@@ -1,44 +1,91 @@
 package ru.rompet.cloudstorage.client.handler;
 
-import ru.rompet.cloudstorage.common.Command;
+import ru.rompet.cloudstorage.common.enums.Command;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 
 public class ConsoleInputHandler {
     private String[] args;
     private Command command;
-    private Path path;
+    private Path fromPath;
+    private Path toPath;
+    private String login;
+    private String password;
     private ArrayList<String> parameters;
+    boolean isValidCommand;
+    boolean isValidCredentials;
+    boolean isValidPath;
 
     public ConsoleInputHandler() {
         parameters = new ArrayList<>();
     }
 
     public boolean validate(String input) {
+        isValidCommand = isValidCredentials = isValidPath = true;
         this.args = input.split("\\s");
-        return isValidCommand() && isValidPath() && isValidParameters();
+        if (!parseCommand()) {
+            isValidCommand = false;
+            return false;
+        }
+        parseParameters();
+        if (command == Command.AUTH) {
+            if (!parseCredentials()) {
+                isValidCredentials = false;
+                return false;
+            }
+        } else {
+            if (!parsePath()) {
+                isValidPath = false;
+                return false;
+            }
+        }
+        return true;
     }
 
     public Command getCommand() {
         return command;
     }
 
-    public String getFilename() {
-        return path.getFileName().toString();
-    }
-
     public ArrayList<String> getParameters() {
         return parameters;
     }
 
-    public String getPath() {
-        return path.toString();
+    public String getFromPath() {
+        return fromPath.toString();
+    }
+
+    public String getToPath() {
+        return toPath.toString();
+    }
+
+    public String getLogin() {
+        return login;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public boolean hasParameters() {
+        return parameters.size() != 0;
     }
 
     public boolean isValidCommand() {
+        return isValidCommand;
+    }
+
+    public boolean isValidCredentials() {
+        return isValidCredentials;
+    }
+
+    public boolean isValidPath() {
+        return isValidPath;
+    }
+
+    private boolean parseCommand() {
         try {
             command = Command.valueOf(args[0].toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -47,23 +94,37 @@ public class ConsoleInputHandler {
         return true;
     }
 
-    public boolean isValidPath() {
+    private void parseParameters() {
+        parameters.clear();
+        for (int i = 1; i < args.length; i++) {
+            if (Parameter.has(args[i].substring(1))) {
+                parameters.add(args[i]);
+            } else {
+                break;
+            }
+        }
+    }
+
+    public boolean parsePath() {
         try {
-            path = Paths.get(args[args.length - 1]);
-        } catch (InvalidPathException | NullPointerException e) {
+            fromPath = Path.of(args[1 + parameters.size()]);
+            if (args.length - 1 == 2 + parameters.size()) {
+                toPath = Path.of(args[2 + parameters.size()]);
+            } else {
+                toPath = fromPath;
+            }
+        } catch (InvalidPathException | ArrayIndexOutOfBoundsException e) {
             return false;
         }
         return true;
     }
 
-    public boolean isValidParameters() {
-        parameters.clear();
-        for (int i = 1; i <= args.length - 2; i++) {
-            if (args[i].matches("\\s-[a-zA-Z]*\\s")) {
-                parameters.add(args[i]);
-            } else {
-                return false;
-            }
+    private boolean parseCredentials() {
+        try {
+            login = args[1 + parameters.size()];
+            password = args[2 + parameters.size()];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
         }
         return true;
     }

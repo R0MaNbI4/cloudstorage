@@ -2,10 +2,14 @@ package ru.rompet.cloudstorage.client.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import ru.rompet.cloudstorage.client.Client;
+import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
 
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class FileHandler extends SimpleChannelInboundHandler<Response> {
     private final int BUFFER_SIZE = 1024 * 512;
@@ -17,11 +21,14 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             case LOAD -> load(ctx, response);
             case SAVE -> save(ctx, response);
             case DELETE -> delete(ctx, response);
+            case DIR -> dir(ctx, response);
+            case AUTH -> auth(ctx, response);
         }
     }
 
     private void load(ChannelHandlerContext ctx, Response response) throws Exception {
         if (response.getErrorInfo().isSuccessful()) {
+            createDirectoryIfNotExists(response);
             writePartFile(response);
             if (!response.getPartFileInfo().isLastPart()) {
                 Request request = new Request(response);
@@ -47,9 +54,25 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
         }
     }
 
+    private void dir(ChannelHandlerContext ctx, Response response) throws Exception {
+        for (DirectoryStructureEntry entry : response.getDirectoryStructure()) {
+            System.out.println(entry.getName() + "\t" + entry.getSizeInBytes() + "\t" + entry.isDirectory());
+        }
+    }
+
+    private void auth(ChannelHandlerContext ctx, Response response) {
+        if (response.isAuthenticated()) {
+            Client.setLogin(response.getCredentials().getLogin());
+            Client.setAuthenticated(response.isAuthenticated());
+            System.out.println("Successful");
+        } else {
+            System.out.println("Authentication failed");
+        }
+    }
+
     private void writePartFile(Response response) throws Exception {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(
-                DEFAULT_FILE_LOCATION + response.getFilename(), "rw")) {
+                DEFAULT_FILE_LOCATION + response.getToPath(), "rw")) {
             randomAccessFile.seek(response.getPartFileInfo().getPosition());
             randomAccessFile.write(response.getPartFileInfo().getFile());
         }
@@ -60,7 +83,7 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
         request.getPartFileInfo().setPosition(response);
         byte[] buffer = new byte[BUFFER_SIZE];
         try (RandomAccessFile accessFile = new RandomAccessFile(
-                DEFAULT_FILE_LOCATION + response.getFilename(), "r")) {
+                DEFAULT_FILE_LOCATION + response.getFromPath(), "r")) {
             accessFile.seek(response.getPartFileInfo().getPosition());
             int read = accessFile.read(buffer);
             if (read < buffer.length - 1) {
@@ -74,5 +97,14 @@ public class FileHandler extends SimpleChannelInboundHandler<Response> {
             }
         }
         return request;
+    }
+
+    private void createDirectoryIfNotExists(Response response) throws Exception {
+        if (response.getPartFileInfo().isFirstPart()) {
+            Path path = Path.of(DEFAULT_FILE_LOCATION + response.getToPath()).getParent();
+            if (Files.notExists(path)) {
+                Files.createDirectories(path);
+            }
+        }
     }
 }

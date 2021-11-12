@@ -1,14 +1,15 @@
 package ru.rompet.cloudstorage.common;
 
+import ru.rompet.cloudstorage.common.enums.Command;
+
 import java.io.Serializable;
 
 public class Request extends Message implements Serializable
 {
-    private Request(){
-    }
+    private Request(){}
 
-    public Request(Command command, String filename) {
-        super(command, filename);
+    public Request(Command command) {
+        super(command);
     }
 
     public Request(Response response) {
@@ -16,6 +17,6 @@ public class Request extends Message implements Serializable
     }
 
     public boolean hasData() {
-        return getPartFileInfo().getFile() == null || getPartFileInfo().getFile().length == 0;
+        return !(getPartFileInfo().getFile() == null || getPartFileInfo().getFile().length == 0);
     }
 }

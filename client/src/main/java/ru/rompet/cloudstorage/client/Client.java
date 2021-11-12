@@ -15,10 +15,13 @@ import ru.rompet.cloudstorage.client.handler.FileHandler;
 import ru.rompet.cloudstorage.client.handler.JsonDecoder;
 import ru.rompet.cloudstorage.client.handler.JsonEncoder;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.enums.Command;
 
 import java.util.Scanner;
 
 public class Client{
+    private static boolean authenticated = false;
+    private static String login = "";
     private final int MAX_FRAME_LENGTH = 1024 * 1024;
     private final int LENGTH_FIELD_LENGTH = 8;
 
@@ -57,23 +60,46 @@ public class Client{
             ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
             while (true) {
                 if (consoleInputHandler.validate(scanner.nextLine())) {
-                    Request request = new Request(
-                            consoleInputHandler.getCommand(),
-                            consoleInputHandler.getFilename()
-                    );
+                    Request request = new Request(consoleInputHandler.getCommand());
+                    request.setAuthenticated(authenticated);
+                    if (consoleInputHandler.getCommand() == Command.AUTH) {
+                        request.getCredentials().setLogin(consoleInputHandler.getLogin());
+                        request.getCredentials().setPassword(consoleInputHandler.getPassword());
+                        if (request.isAuthenticated()) {
+                            System.out.println("You are already authenticated");
+                            continue;
+                        }
+                    } else {
+                        request.setFromPath(consoleInputHandler.getFromPath());
+                        request.setToPath(consoleInputHandler.getToPath());
+                        if (request.isAuthenticated()) {
+                            request.getCredentials().setLogin(login);
+                        } else {
+                            System.out.println("You are not authenticated\nUse command 'auth login pass'");
+                            continue;
+                        }
+                    }
                     f.channel().writeAndFlush(request);
                 } else {
                     if (!consoleInputHandler.isValidCommand()) {
                         System.out.println("Invalid command");
                     } else if (!consoleInputHandler.isValidPath()) {
                         System.out.println("Invalid path");
-                    } else if (!consoleInputHandler.isValidParameters()) {
-                        System.out.println("Invalid parameter");
+                    } else if (!consoleInputHandler.isValidCredentials()) {
+                        System.out.println("Invalid credentials");
                     }
                 }
             }
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+    public static void setAuthenticated(boolean authenticated) {
+        Client.authenticated = authenticated;
+    }
+
+    public static void setLogin(String login) {
+        Client.login = login;
     }
 }
