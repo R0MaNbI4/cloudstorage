@@ -61,7 +61,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
         if (response.getErrorInfo().isSuccessful()) {
             if (Files.exists(path)) {
                 boolean isFile = Files.isRegularFile(path);
-                if (fileStateTracker.isLock(response, DEFAULT_FILE_LOCATION, isFile)) {
+                if (!fileStateTracker.isLock(response, DEFAULT_FILE_LOCATION, isFile)) {
                     if (isFile) {
                         if (response.hasParameter(Parameter.RN) && response.getPartFileInfo().isFirstPart()) {
                             response.setToPath(rename(response.getToPath(), true));

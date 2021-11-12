@@ -15,15 +15,21 @@ public class FileStateTracker {
     }
 
     public boolean isLock(Message message, String rootDirectory, boolean isFile) {
-        if (isFile) {
-            return listOfPaths.contains(rootDirectory + message.getFromPath());
-        } else {
-            for (String path : listOfPaths) {
-                if (path.startsWith(rootDirectory + message.getFromPath())) {
-                    return true;
+        if (listOfPaths.size() > 0) {
+            if (isFile) {
+                return listOfPaths.contains(rootDirectory + message.getFromPath());
+            } else {
+                for (String path : listOfPaths) {
+                    if (path.startsWith(rootDirectory + message.getFromPath())) {
+                        return true;
+                    }
                 }
             }
         }
         return false;
+    }
+
+    public int getCount() {
+        return listOfPaths.size();
     }
 }

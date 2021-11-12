@@ -51,7 +51,6 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                         Request request1 = (Request) request.clone();
                         request1.addToPaths(filePath.toString());
                         ctx.writeAndFlush(readPartFile(request1, rootDirectory));
-                        System.out.println(request1.getToPath());
                     }
                 }
             } else {
