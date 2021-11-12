@@ -57,9 +57,10 @@ public class Client{
             ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
             while (true) {
                 if (consoleInputHandler.validate(scanner.nextLine())) {
-                    Request request = new Request();
-                    request.setCommand(consoleInputHandler.getCommand());
-                    request.setFilename(consoleInputHandler.getFilename());
+                    Request request = new Request(
+                            consoleInputHandler.getCommand(),
+                            consoleInputHandler.getFilename()
+                    );
                     f.channel().writeAndFlush(request);
                 } else {
                     if (!consoleInputHandler.isValidCommand()) {
