@@ -9,6 +9,7 @@ public class ErrorInfo implements Serializable {
     private boolean isPathNotExists;
     private boolean isWrongPath;
     private boolean isFileUnableToDelete;
+    private boolean isFileLock;
     private String ErrorDetails;
 
     public ErrorInfo() {
@@ -84,5 +85,16 @@ public class ErrorInfo implements Serializable {
 
     public void setErrorDetails(String errorDetails) {
         ErrorDetails = errorDetails;
+    }
+
+    public boolean isFileLock() {
+        return isFileLock;
+    }
+
+    public void setFileLock(boolean fileLock) {
+        if (fileLock) {
+            isSuccessful = false;
+        }
+        isFileLock = fileLock;
     }
 }

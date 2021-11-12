@@ -3,6 +3,7 @@ package ru.rompet.cloudstorage.server.domain.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.commons.io.FileUtils;
+import ru.rompet.cloudstorage.common.FileStateTracker;
 import ru.rompet.cloudstorage.common.Response;
 import ru.rompet.cloudstorage.common.Request;
 import ru.rompet.cloudstorage.common.data.DirectoryStructure;
@@ -15,10 +16,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private String rootDirectory;
+    private final FileStateTracker fileStateTracker = new FileStateTracker();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
@@ -37,17 +40,24 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private void load(ChannelHandlerContext ctx, Request request) throws Exception {
         Path path = Path.of(rootDirectory + request.getFromPath());
         if (Files.exists(path)) {
-            if (Files.isRegularFile(path)) {
-                ctx.writeAndFlush(readPartFile(request, rootDirectory));
-            } else if (Files.isDirectory(path)) {
-                request.addToPaths("\\");
-                List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, false); // relative path, because full destination path may not match full source path
-                for (Path filePath : filePaths) {
-                    Request request1 = (Request) request.clone();
-                    request1.addToPaths(filePath.toString());
-                    ctx.writeAndFlush(readPartFile(request1, rootDirectory));
-                    System.out.println(request1.getToPath());
+            boolean isFile = Files.isRegularFile(path);
+            if (!fileStateTracker.isLock(request, rootDirectory, isFile)) {
+                if (isFile) {
+                    ctx.writeAndFlush(readPartFile(request, rootDirectory));
+                } else {
+                    request.addToPaths("\\");
+                    List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, false); // relative path, because full destination path may not match full source path
+                    for (Path filePath : filePaths) {
+                        Request request1 = (Request) request.clone();
+                        request1.addToPaths(filePath.toString());
+                        ctx.writeAndFlush(readPartFile(request1, rootDirectory));
+                        System.out.println(request1.getToPath());
+                    }
                 }
+            } else {
+                Response response = new Response(request);
+                response.getErrorInfo().setFileLock(true);
+                ctx.writeAndFlush(response);
             }
         } else {
             Response response = new Response(request);
@@ -74,6 +84,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
                 }
                 ctx.writeAndFlush(response);
             } else {
+                fileStateTracker.sync(request, rootDirectory);
                 writePartFile(request, rootDirectory);
                 if (!request.getPartFileInfo().isLastPart()) {
                     response.getPartFileInfo().addPosition(request, BUFFER_SIZE);
@@ -88,18 +99,23 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         File file = new File(rootDirectory + request.getFromPath());
         Response response = new Response(request);
         if (Files.exists(path)) {
-            if (Files.isRegularFile(path)) {
-                if (!file.delete()) {
-                    response.getErrorInfo().setFileUnableToDelete(true);
-                }
-            } else if (Files.isDirectory(path)) {
-                request.addToPaths("\\");
-                List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, true);
-                if (canDeleteFiles(filePaths)) {
-                    deleteFiles(request, filePaths);
+            boolean isFile = Files.isRegularFile(path);
+            if (!fileStateTracker.isLock(request, rootDirectory, isFile)) {
+                if (isFile) {
+                    if (!file.delete()) {
+                        response.getErrorInfo().setFileUnableToDelete(true);
+                    }
                 } else {
-                    response.getErrorInfo().setFileUnableToDelete(true);
+                    request.addToPaths("\\");
+                    List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, true);
+                    if (canDeleteFiles(filePaths)) {
+                        deleteFiles(request, filePaths);
+                    } else {
+                        response.getErrorInfo().setFileUnableToDelete(true);
+                    }
                 }
+            } else {
+                response.getErrorInfo().setFileLock(true);
             }
         } else {
             response.getErrorInfo().setFileNotExists(true);
@@ -128,44 +144,46 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
 
     private void move(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
-        if (!Files.exists(Path.of(rootDirectory + request.getFromPath()))) {
-            response.getErrorInfo().setFileNotExists(true);
-        }
-        if (!isPathExists(request, rootDirectory)) {
-            if (request.hasParameter(Parameter.CD)) {
+        if (Files.exists(Path.of(rootDirectory + request.getFromPath()))) {
+            if (!(!isPathExists(request, rootDirectory) && !request.hasParameter(Parameter.CD))) {
                 createParentDirectories(request, rootDirectory);
+                String relativePath = Path.of(request.getFromPath()).relativize(Path.of(request.getToPath())).toString();
+                System.out.println(relativePath);
+                if (relativePath.equals("") || relativePath.startsWith("..")) {
+                    String srcString = rootDirectory + request.getFromPath();
+                    Path srcPath = Path.of(srcString);
+                    File srcFile = new File(srcString);
+                    File dstFile = new File(rootDirectory + request.getToPath());
+                    boolean isFile = Files.isRegularFile(srcPath);
+                    if (!fileStateTracker.isLock(request, rootDirectory, isFile)) {
+                        if (isFile) {
+                            if (canDeleteFile(srcString)) {
+                                FileUtils.copyFile(srcFile, dstFile);
+                                FileUtils.delete(srcFile);
+                            } else {
+                                response.getErrorInfo().setFileUnableToDelete(true);
+                            }
+                        } else {
+                            request.addToPaths("\\");
+                            List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, true);
+                            if (canDeleteFiles(filePaths)) {
+                                FileUtils.copyDirectory(srcFile, dstFile);
+                                FileUtils.deleteDirectory(srcFile);
+                            } else {
+                                response.getErrorInfo().setFileUnableToDelete(true);
+                            }
+                        }
+                    } else {
+                        response.getErrorInfo().setFileLock(true);
+                    }
+                } else {
+                    response.getErrorInfo().setWrongPath(true);
+                }
             } else {
                 response.getErrorInfo().setPathNotExists(true);
             }
-        }
-        String relativePath = Path.of(request.getFromPath()).relativize(Path.of(request.getToPath())).toString();
-        if (!relativePath.equals("") && !relativePath.startsWith("..")) {
-            response.getErrorInfo().setWrongPath(true);
-        }
-        if (!response.getErrorInfo().isSuccessful()) {
-            ctx.writeAndFlush(response);
-            return;
-        }
-
-        String srcString = rootDirectory + request.getFromPath();
-        Path srcPath = Path.of(srcString);
-        File srcFile = new File(srcString);
-        File dstFile = new File(rootDirectory + request.getToPath());
-        if (Files.isRegularFile(srcPath)) {
-            if (canDeleteFile(srcString)) {
-                FileUtils.copyFile(srcFile, dstFile);
-                FileUtils.delete(srcFile);
-            } else {
-                response.getErrorInfo().setFileUnableToDelete(true);
-            }
-        }
-        if (Files.isDirectory(srcPath)){
-            request.addToPaths("\\");
-            List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, true);
-            if (canDeleteFiles(filePaths)) {
-                FileUtils.copyDirectory(srcFile, dstFile);
-                FileUtils.deleteDirectory(srcFile);
-            }
+        } else {
+            response.getErrorInfo().setFileNotExists(true);
         }
         ctx.writeAndFlush(response);
     }

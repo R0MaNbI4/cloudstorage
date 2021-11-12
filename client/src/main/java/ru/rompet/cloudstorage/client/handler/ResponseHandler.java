@@ -3,6 +3,7 @@ package ru.rompet.cloudstorage.client.handler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import ru.rompet.cloudstorage.client.Client;
+import ru.rompet.cloudstorage.common.FileStateTracker;
 import ru.rompet.cloudstorage.common.data.DirectoryStructure;
 import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
 import ru.rompet.cloudstorage.common.Response;
@@ -18,6 +19,7 @@ import java.util.List;
 
 public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
     private final String DEFAULT_FILE_LOCATION = "clientFiles\\";
+    private final FileStateTracker fileStateTracker = new FileStateTracker();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Response response) throws Exception {
@@ -38,6 +40,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
             if (response.getPartFileInfo().isFirstPart()) {
                 createParentDirectories(response, DEFAULT_FILE_LOCATION);
             }
+            fileStateTracker.sync(response, DEFAULT_FILE_LOCATION);
             writePartFile(response, DEFAULT_FILE_LOCATION);
             if (!response.getPartFileInfo().isLastPart()) {
                 Request request = new Request(response);
@@ -47,6 +50,8 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
         } else {
             if (response.getErrorInfo().isFileNotExists()) {
                 System.out.println("File not exists");
+            } else if (response.getErrorInfo().isFileLock()) {
+                System.out.println("File has not been uploaded yet");
             }
         }
     }
@@ -55,27 +60,32 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
         Path path = Path.of(DEFAULT_FILE_LOCATION + response.getFromPath());
         if (response.getErrorInfo().isSuccessful()) {
             if (Files.exists(path)) {
-                if (Files.isRegularFile(path)) {
-                    if (response.hasParameter(Parameter.RN) && response.getPartFileInfo().isFirstPart()) {
-                        response.setToPath(rename(response.getToPath(), true));
-                    }
-                    Request request = (Request) readPartFile(response, DEFAULT_FILE_LOCATION);
-                    ctx.writeAndFlush(request);
-                } else if (Files.isDirectory(path)) {
-                    if (!response.hasParameter(Parameter.CD)) {
-                        response.addParameter(Parameter.CD);
-                    }
-                    if (response.hasParameter(Parameter.RN)) {
-                        response.setToPath(rename(response.getToPath(), false));
-                        response.removeParameter(Parameter.RN);
-                    }
-                    response.addToPaths("\\");
-                    List<Path> filePaths = DirectoryStructure.listFiles(response, DEFAULT_FILE_LOCATION, false);
-                    for (Path filePath : filePaths) {
-                        Request request = new Request(response);
-                        request.addToPaths(filePath.toString());
+                boolean isFile = Files.isRegularFile(path);
+                if (fileStateTracker.isLock(response, DEFAULT_FILE_LOCATION, isFile)) {
+                    if (isFile) {
+                        if (response.hasParameter(Parameter.RN) && response.getPartFileInfo().isFirstPart()) {
+                            response.setToPath(rename(response.getToPath(), true));
+                        }
+                        Request request = (Request) readPartFile(response, DEFAULT_FILE_LOCATION);
                         ctx.writeAndFlush(request);
+                    } else {
+                        if (!response.hasParameter(Parameter.CD)) {
+                            response.addParameter(Parameter.CD);
+                        }
+                        if (response.hasParameter(Parameter.RN)) {
+                            response.setToPath(rename(response.getToPath(), false));
+                            response.removeParameter(Parameter.RN);
+                        }
+                        response.addToPaths("\\");
+                        List<Path> filePaths = DirectoryStructure.listFiles(response, DEFAULT_FILE_LOCATION, false);
+                        for (Path filePath : filePaths) {
+                            Request request = new Request(response);
+                            request.addToPaths(filePath.toString());
+                            ctx.writeAndFlush(request);
+                        }
                     }
+                } else {
+                    System.out.println("File has not been downloaded yet");
                 }
             } else {
                 System.out.println("File is not exists");
@@ -97,6 +107,8 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                 System.out.println("File not exists");
             } else if (response.getErrorInfo().isFileUnableToDelete()) {
                 System.out.println("File " + response.getErrorInfo().getErrorDetails() + " unable to delete");
+            } else if (response.getErrorInfo().isFileLock()){
+                System.out.println("File has not been uploaded yet");
             } else {
                 System.out.println("Not deleted");
             }
@@ -123,6 +135,8 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                 System.out.println("You can't specify same paths or move directory to it's subdirectory ");
             } else if (response.getErrorInfo().isFileUnableToDelete()) {
                 System.out.println("Unable to delete file");
+            } else if (response.getErrorInfo().isFileLock()) {
+                System.out.println("File has not been uploaded yet");
             }
         } else {
             System.out.println("Successful");
