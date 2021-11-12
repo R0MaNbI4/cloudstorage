@@ -1,6 +1,8 @@
 package ru.rompet.cloudstorage.common.data;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import ru.rompet.cloudstorage.common.Message;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.io.IOException;
 import java.nio.file.*;
@@ -30,10 +32,27 @@ public class DirectoryStructure implements Iterable<DirectoryStructureEntry> {
 
     private List<Path> listFiles(Path path) throws IOException {
         List<Path> result;
+        Path parent = path.getParent();
         try (Stream<Path> walk = Files.walk(path, 1)) {
             result = walk
                     .filter(x -> Files.isRegularFile(x) || Files.isDirectory(x))
-                    .filter(x -> x.getParent() != null) // exclude parent directory
+                    .filter(x -> x.getParent() != null && !x.getParent().equals(parent)) // exclude parent directory
+                    .collect(Collectors.toList());
+        }
+        return result;
+    }
+
+    public static List<Path> listFiles(Message message, String rootPath, boolean fullPath) throws IOException {
+        List<Path> result;
+        Path path = Path.of(message.getFromPath());
+        Path root = Path.of(rootPath);
+        boolean recursive = message.hasParameter(Parameter.R);
+        Path fullPath1 = root.resolve(path);
+        try (Stream<Path> walk = Files.walk(fullPath1, recursive ? Integer.MAX_VALUE : 1)) {
+            result = walk
+                    .filter(Files::isRegularFile)
+                    .map(recursive ? fullPath1::relativize : Path::getFileName)
+                    .map(fullPath ? fullPath1::resolve : x -> x)
                     .collect(Collectors.toList());
         }
         return result;

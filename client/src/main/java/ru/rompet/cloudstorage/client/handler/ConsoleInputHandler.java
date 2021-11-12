@@ -14,10 +14,14 @@ public class ConsoleInputHandler {
     private Path toPath;
     private String login;
     private String password;
-    private ArrayList<String> parameters;
+    private ArrayList<Parameter> parameters;
     boolean isValidCommand;
     boolean isValidCredentials;
     boolean isValidPath;
+    private final String[] restrictedDirectoryName = {
+            "CON", "PRN", "AUX", "NUL",
+            "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+            "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"};
 
     public ConsoleInputHandler() {
         parameters = new ArrayList<>();
@@ -31,7 +35,11 @@ public class ConsoleInputHandler {
             return false;
         }
         parseParameters();
-        if (command == Command.AUTH) {
+        if (command == Command.DIR && args.length == 1) {
+            fromPath = toPath = Path.of("");
+            return true;
+        }
+        if (command == Command.AUTH || command == Command.REGISTER) {
             if (!parseCredentials()) {
                 isValidCredentials = false;
                 return false;
@@ -49,7 +57,7 @@ public class ConsoleInputHandler {
         return command;
     }
 
-    public ArrayList<String> getParameters() {
+    public ArrayList<Parameter> getParameters() {
         return parameters;
     }
 
@@ -97,8 +105,9 @@ public class ConsoleInputHandler {
     private void parseParameters() {
         parameters.clear();
         for (int i = 1; i < args.length; i++) {
-            if (Parameter.has(args[i].substring(1))) {
-                parameters.add(args[i]);
+            String enumString = args[i].substring(1).toUpperCase();
+            if (Parameter.has(enumString)) {
+                parameters.add(Parameter.valueOf(enumString));
             } else {
                 break;
             }
@@ -124,6 +133,23 @@ public class ConsoleInputHandler {
             login = args[1 + parameters.size()];
             password = args[2 + parameters.size()];
         } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
+        return isValidDirectoryName(login);
+    }
+
+    private boolean isValidDirectoryName(String name) {
+        try {
+            Path.of(name);
+        } catch (InvalidPathException e) {
+            return false;
+        }
+        for (int i = 0; i < restrictedDirectoryName.length; i++) {
+            if (name.toUpperCase().equals(restrictedDirectoryName[i])) {
+                return false;
+            }
+        }
+        if (name.endsWith(".") || name.endsWith(" ")) {
             return false;
         }
         return true;

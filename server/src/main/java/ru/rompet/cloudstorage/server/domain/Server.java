@@ -11,7 +11,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
-import ru.rompet.cloudstorage.server.domain.handler.FileHandler;
+import ru.rompet.cloudstorage.server.domain.handler.RequestHandler;
 import ru.rompet.cloudstorage.server.domain.handler.JsonDecoder;
 import ru.rompet.cloudstorage.server.domain.handler.JsonEncoder;
 
@@ -43,7 +43,7 @@ public class Server {
                                     new ByteArrayEncoder(),
                                     new JsonDecoder(),
                                     new JsonEncoder(),
-                                    new FileHandler()
+                                    new RequestHandler()
                             );
                         }
                     })

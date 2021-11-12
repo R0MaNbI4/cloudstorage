@@ -11,12 +11,17 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.bytes.ByteArrayDecoder;
 import io.netty.handler.codec.bytes.ByteArrayEncoder;
 import ru.rompet.cloudstorage.client.handler.ConsoleInputHandler;
-import ru.rompet.cloudstorage.client.handler.FileHandler;
+import ru.rompet.cloudstorage.client.handler.ResponseHandler;
 import ru.rompet.cloudstorage.client.handler.JsonDecoder;
 import ru.rompet.cloudstorage.client.handler.JsonEncoder;
 import ru.rompet.cloudstorage.common.Request;
 import ru.rompet.cloudstorage.common.enums.Command;
+import ru.rompet.cloudstorage.common.enums.Parameter;
 
+import static ru.rompet.cloudstorage.common.IO.isPathExists;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 public class Client{
@@ -25,7 +30,7 @@ public class Client{
     private final int MAX_FRAME_LENGTH = 1024 * 1024;
     private final int LENGTH_FIELD_LENGTH = 8;
 
-    public Client(String host, int port) throws InterruptedException {
+    public Client(String host, int port) throws Exception {
         NioEventLoopGroup group = new NioEventLoopGroup();
         try {
             Bootstrap client = new Bootstrap();
@@ -47,7 +52,7 @@ public class Client{
                                     new ByteArrayEncoder(),
                                     new JsonDecoder(),
                                     new JsonEncoder(),
-                                    new FileHandler()
+                                    new ResponseHandler()
                             );
                         }
                     });
@@ -62,7 +67,11 @@ public class Client{
                 if (consoleInputHandler.validate(scanner.nextLine())) {
                     Request request = new Request(consoleInputHandler.getCommand());
                     request.setAuthenticated(authenticated);
-                    if (consoleInputHandler.getCommand() == Command.AUTH) {
+                    if (consoleInputHandler.getParameters().size() > 0) {
+                        request.setParameters(consoleInputHandler.getParameters());
+                    }
+                    if (consoleInputHandler.getCommand() == Command.AUTH ||
+                        consoleInputHandler.getCommand() == Command.REGISTER) {
                         request.getCredentials().setLogin(consoleInputHandler.getLogin());
                         request.getCredentials().setPassword(consoleInputHandler.getPassword());
                         if (request.isAuthenticated()) {
@@ -76,6 +85,11 @@ public class Client{
                             request.getCredentials().setLogin(login);
                         } else {
                             System.out.println("You are not authenticated\nUse command 'auth login pass'");
+                            continue;
+                        }
+                        if (request.getCommand() == Command.LOAD && !request.hasParameter(Parameter.CD)
+                                && !isPathExists(request, "clientFiles\\")) {
+                            System.out.println(("Path is not exists. Use parameter -cd to create all necessary directories"));
                             continue;
                         }
                     }

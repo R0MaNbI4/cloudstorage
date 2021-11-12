@@ -6,6 +6,11 @@ public class ErrorInfo implements Serializable {
     private boolean isSuccessful;
     private boolean isFileAlreadyExists;
     private boolean isFileNotExists;
+    private boolean isPathNotExists;
+    private boolean isWrongPath;
+    private boolean isFileUnableToDelete;
+    private boolean isFileLock;
+    private String ErrorDetails;
 
     public ErrorInfo() {
         setSuccessful(true);
@@ -24,6 +29,9 @@ public class ErrorInfo implements Serializable {
     }
 
     public void setFileAlreadyExists(boolean fileAlreadyExists) {
+        if (fileAlreadyExists) {
+            isSuccessful = false;
+        }
         isFileAlreadyExists = fileAlreadyExists;
     }
 
@@ -32,6 +40,61 @@ public class ErrorInfo implements Serializable {
     }
 
     public void setFileNotExists(boolean fileNotExists) {
+        if (fileNotExists) {
+            isSuccessful = false;
+        }
         isFileNotExists = fileNotExists;
+    }
+
+    public boolean isPathNotExists() {
+        return isPathNotExists;
+    }
+
+    public void setPathNotExists(boolean pathNotExists) {
+        if (pathNotExists) {
+            isSuccessful = false;
+        }
+        isPathNotExists = pathNotExists;
+    }
+
+    public boolean isWrongPath() {
+        return isWrongPath;
+    }
+
+    public void setWrongPath(boolean wrongPath) {
+        if (wrongPath) {
+            isSuccessful = false;
+        }
+        isWrongPath = wrongPath;
+    }
+
+    public boolean isFileUnableToDelete() {
+        return isFileUnableToDelete;
+    }
+
+    public void setFileUnableToDelete(boolean fileUnableToDelete) {
+        if (fileUnableToDelete) {
+            isSuccessful = false;
+        }
+        isFileUnableToDelete = fileUnableToDelete;
+    }
+
+    public String getErrorDetails() {
+        return ErrorDetails;
+    }
+
+    public void setErrorDetails(String errorDetails) {
+        ErrorDetails = errorDetails;
+    }
+
+    public boolean isFileLock() {
+        return isFileLock;
+    }
+
+    public void setFileLock(boolean fileLock) {
+        if (fileLock) {
+            isSuccessful = false;
+        }
+        isFileLock = fileLock;
     }
 }
