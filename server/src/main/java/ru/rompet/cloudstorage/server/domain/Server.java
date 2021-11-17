@@ -15,6 +15,8 @@ import ru.rompet.cloudstorage.server.domain.handler.RequestHandler;
 import ru.rompet.cloudstorage.server.domain.handler.JsonDecoder;
 import ru.rompet.cloudstorage.server.domain.handler.JsonEncoder;
 
+import java.net.SocketException;
+
 public class Server {
     private final int MAX_FRAME_LENGTH = 1024 * 1024;
     private final int LENGTH_FIELD_LENGTH = 8;

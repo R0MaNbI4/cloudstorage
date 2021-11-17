@@ -13,6 +13,8 @@ import static ru.rompet.cloudstorage.common.IO.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketException;
+import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -249,6 +251,16 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
             if (FileUtils.isEmptyDirectory(directory)) {
                 FileUtils.deleteDirectory(directory);
             }
+        }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        if (cause instanceof SocketException) {
+            System.out.println("Client disconnected");
+            fileStateTracker.deletePartiallyDownloadedFiles();
+        } else {
+            cause.printStackTrace();
         }
     }
 }

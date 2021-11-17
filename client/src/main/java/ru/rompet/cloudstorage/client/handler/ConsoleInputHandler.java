@@ -32,7 +32,7 @@ public class ConsoleInputHandler {
 
     public boolean validate(String input) {
         isValidCommand = isValidCredentials = isValidPath = true;
-        this.args = getMatches(input, "(?<=\")[^\\s]+.+?(?=\")|\\-?\\w+");
+        this.args = getMatches(input, "(?<=\")[^\\s]+.+?(?=\")|\\-?[^\\s\"]+");
         if (!parseCommand()) {
             isValidCommand = false;
             return false;

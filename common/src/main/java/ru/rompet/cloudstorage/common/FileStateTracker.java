@@ -1,5 +1,8 @@
 package ru.rompet.cloudstorage.common;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 
 public class FileStateTracker {
@@ -31,5 +34,11 @@ public class FileStateTracker {
 
     public int getCount() {
         return listOfPaths.size();
+    }
+
+    public void deletePartiallyDownloadedFiles() throws IOException {
+        for (String filePath : listOfPaths) {
+            Files.delete(Path.of(filePath));
+        }
     }
 }
