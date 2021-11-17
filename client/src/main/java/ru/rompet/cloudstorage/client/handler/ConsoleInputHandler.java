@@ -1,11 +1,14 @@
 package ru.rompet.cloudstorage.client.handler;
 
+import com.mysql.cj.util.StringUtils;
 import ru.rompet.cloudstorage.common.enums.Command;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ConsoleInputHandler {
     private String[] args;
@@ -29,7 +32,7 @@ public class ConsoleInputHandler {
 
     public boolean validate(String input) {
         isValidCommand = isValidCredentials = isValidPath = true;
-        this.args = input.split("\\s");
+        this.args = getMatches(input, "(?<=\")[^\\s]+.+?(?=\")|\\-?\\w+");
         if (!parseCommand()) {
             isValidCommand = false;
             return false;
@@ -153,5 +156,14 @@ public class ConsoleInputHandler {
             return false;
         }
         return true;
+    }
+
+    private String[] getMatches(String input, String regex) {
+        ArrayList<String> argsArrayList = new ArrayList<>();
+        Matcher m = Pattern.compile(regex).matcher(input);
+        while (m.find()) {
+            argsArrayList.add(m.group());
+        }
+        return argsArrayList.toArray(String[]::new);
     }
 }
