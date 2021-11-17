@@ -239,11 +239,15 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     }
 
     private void deleteFiles(Request request, List<Path> filePaths) throws IOException {
+        File directory = new File(rootDirectory + request.getFromPath());
         if (request.hasParameter(Parameter.R)) {
-            FileUtils.deleteDirectory(new File(rootDirectory + request.getFromPath()));
+            FileUtils.deleteDirectory(directory);
         } else {
             for (Path filePath : filePaths) {
                 Files.delete(filePath);
+            }
+            if (FileUtils.isEmptyDirectory(directory)) {
+                FileUtils.deleteDirectory(directory);
             }
         }
     }
