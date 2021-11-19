@@ -5,7 +5,7 @@ import java.util.Arrays;
 public enum Parameter {
     RW, // rewrite
     RN, // rename
-    R, // recursion
+    NR, // recursion
     CD; // create directories
 
     public static boolean has(String value) {

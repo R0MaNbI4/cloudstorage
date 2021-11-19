@@ -46,7 +46,7 @@ public class DirectoryStructure implements Iterable<DirectoryStructureEntry> {
         List<Path> result;
         Path path = Path.of(message.getFromPath());
         Path root = Path.of(rootPath);
-        boolean recursive = message.hasParameter(Parameter.R);
+        boolean recursive = !message.hasParameter(Parameter.NR);
         Path fullPath1 = root.resolve(path);
         try (Stream<Path> walk = Files.walk(fullPath1, recursive ? Integer.MAX_VALUE : 1)) {
             result = walk

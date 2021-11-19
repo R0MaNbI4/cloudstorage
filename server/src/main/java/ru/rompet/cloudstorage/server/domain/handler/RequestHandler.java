@@ -127,7 +127,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private void create(ChannelHandlerContext ctx, Request request) throws Exception {
         Response response = new Response(request);
         Path path = Path.of(rootDirectory + request.getToPath());
-        if (request.hasParameter(Parameter.R)) {
+        if (!request.hasParameter(Parameter.NR)) {
             Files.createDirectories(path);
         } else {
             if (!Files.exists(path.getParent())) {
@@ -242,7 +242,7 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
 
     private void deleteFiles(Request request, List<Path> filePaths) throws IOException {
         File directory = new File(rootDirectory + request.getFromPath());
-        if (request.hasParameter(Parameter.R)) {
+        if (!request.hasParameter(Parameter.NR)) {
             FileUtils.deleteDirectory(directory);
         } else {
             for (Path filePath : filePaths) {
