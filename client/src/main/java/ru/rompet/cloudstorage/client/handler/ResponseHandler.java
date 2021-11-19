@@ -118,7 +118,7 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
     private void create(ChannelHandlerContext ctx, Response response) throws Exception {
         if (!response.getErrorInfo().isSuccessful()) {
             if (response.getErrorInfo().isPathNotExists()) {
-                System.out.println("Path is not exists. You can create only one directory");
+                System.out.println("You can create only one directory. Use parameter -r to create multiple");
             }
         } else {
             System.out.println("Successful");

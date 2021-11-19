@@ -65,35 +65,39 @@ public class Client{
             ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
             while (true) {
                 if (consoleInputHandler.validate(scanner.nextLine())) {
-                    Request request = new Request(consoleInputHandler.getCommand());
-                    request.setAuthenticated(authenticated);
-                    if (consoleInputHandler.getParameters().size() > 0) {
-                        request.setParameters(consoleInputHandler.getParameters());
-                    }
-                    if (consoleInputHandler.getCommand() == Command.AUTH ||
-                        consoleInputHandler.getCommand() == Command.REGISTER) {
-                        request.getCredentials().setLogin(consoleInputHandler.getLogin());
-                        request.getCredentials().setPassword(consoleInputHandler.getPassword());
-                        if (request.isAuthenticated()) {
-                            System.out.println("You are already authenticated");
-                            continue;
-                        }
+                    if (consoleInputHandler.getCommand() == Command.HELP) {
+                        System.out.println(new HelpMessage());
                     } else {
-                        request.setFromPath(consoleInputHandler.getFromPath());
-                        request.setToPath(consoleInputHandler.getToPath());
-                        if (request.isAuthenticated()) {
-                            request.getCredentials().setLogin(login);
+                        Request request = new Request(consoleInputHandler.getCommand());
+                        request.setAuthenticated(authenticated);
+                        if (consoleInputHandler.getParameters().size() > 0) {
+                            request.setParameters(consoleInputHandler.getParameters());
+                        }
+                        if (consoleInputHandler.getCommand() == Command.AUTH ||
+                                consoleInputHandler.getCommand() == Command.REGISTER) {
+                            request.getCredentials().setLogin(consoleInputHandler.getLogin());
+                            request.getCredentials().setPassword(consoleInputHandler.getPassword());
+                            if (request.isAuthenticated()) {
+                                System.out.println("You are already authenticated");
+                                continue;
+                            }
                         } else {
-                            System.out.println("You are not authenticated\nUse command 'auth login pass'");
-                            continue;
+                            request.setFromPath(consoleInputHandler.getFromPath());
+                            request.setToPath(consoleInputHandler.getToPath());
+                            if (request.isAuthenticated()) {
+                                request.getCredentials().setLogin(login);
+                            } else {
+                                System.out.println("You are not authenticated\nUse command 'auth login pass'");
+                                continue;
+                            }
+                            if (request.getCommand() == Command.LOAD && !request.hasParameter(Parameter.CD)
+                                    && !isPathExists(request, "clientFiles\\")) {
+                                System.out.println(("Path is not exists. Use parameter -cd to create all necessary directories"));
+                                continue;
+                            }
                         }
-                        if (request.getCommand() == Command.LOAD && !request.hasParameter(Parameter.CD)
-                                && !isPathExists(request, "clientFiles\\")) {
-                            System.out.println(("Path is not exists. Use parameter -cd to create all necessary directories"));
-                            continue;
-                        }
+                        f.channel().writeAndFlush(request);
                     }
-                    f.channel().writeAndFlush(request);
                 } else {
                     if (!consoleInputHandler.isValidCommand()) {
                         System.out.println("Invalid command");

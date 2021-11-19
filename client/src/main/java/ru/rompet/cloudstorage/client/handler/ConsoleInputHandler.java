@@ -38,7 +38,7 @@ public class ConsoleInputHandler {
             return false;
         }
         parseParameters();
-        if (command == Command.DIR && args.length == 1) {
+        if ((command == Command.DIR || command == Command.HELP) && args.length == 1) {
             fromPath = toPath = Path.of("");
             return true;
         }
