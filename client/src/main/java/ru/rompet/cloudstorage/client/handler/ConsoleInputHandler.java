@@ -1,14 +1,19 @@
 package ru.rompet.cloudstorage.client.handler;
 
 import com.mysql.cj.util.StringUtils;
+import ru.rompet.cloudstorage.common.FilesVisitor;
 import ru.rompet.cloudstorage.common.enums.Command;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ConsoleInputHandler {
     private String[] args;
@@ -30,9 +35,14 @@ public class ConsoleInputHandler {
         parameters = new ArrayList<>();
     }
 
-    public boolean validate(String input) {
+    public boolean validate(String input) throws Exception {
         isValidCommand = isValidCredentials = isValidPath = true;
+        // split by space, but words in quotation marks keep together
+        // Example: save -r "directory name\test.txt" -> ["save","-r","directory name\test.txt"]
         this.args = getMatches(input, "(?<=\")[^\\s]+.+?(?=\")|\\-?[^\\s\"]+");
+        for (int i = 0; i < args.length; i++) {
+            args[i] = args[i].replaceAll("\\/","\\");
+        }
         if (!parseCommand()) {
             isValidCommand = false;
             return false;
@@ -117,17 +127,83 @@ public class ConsoleInputHandler {
         }
     }
 
-    public boolean parsePath() {
-        try {
-            fromPath = Path.of(args[1 + parameters.size()]);
-            if (args.length - 1 == 2 + parameters.size()) {
-                toPath = Path.of(args[2 + parameters.size()]);
+    public boolean parsePath() throws Exception {
+//        try {
+//            fromPath = Path.of(args[1 + parameters.size()]);
+//            if (args.length - 1 == 2 + parameters.size()) {
+//                toPath = Path.of(args[2 + parameters.size()]);
+//            } else {
+//                toPath = fromPath;
+//            }
+//        } catch (InvalidPathException | ArrayIndexOutOfBoundsException e) {
+//            return false;
+//        }
+
+        fromPath = Path.of(args[1 + parameters.size()]);
+        Path fileName = fromPath.getFileName();
+        if (!hasParameter(Parameter.D) || !hasExtension(fromPath)) {
+            Path parent = fromPath.getParent();
+            FilesVisitor visitor = new FilesVisitor(1);
+            Files.walkFileTree(parent, visitor);
+            Path finalFileName = fileName;
+            List<Path> result = visitor.getFilesStream()
+                    .filter(x -> getFilenameWithoutExtension(x).equals(finalFileName))
+                    .collect(Collectors.toList());
+
+            if (result.size() > 1) {
+                System.out.println("Multiple files or directories with the same name\n" +
+                                   "Specify the extension if it's a file or use the -f flag if it's a directory");
+                return false;
+            } else if (result.size() == 0) {
+                return false;
             } else {
-                toPath = fromPath;
+                fileName = result.get(0);
+                fromPath = fromPath.getParent().resolve(fileName);
             }
-        } catch (InvalidPathException | ArrayIndexOutOfBoundsException e) {
-            return false;
         }
+        if (isToPathDefined()) {
+            toPath = Path.of(args[2 + parameters.size()]);
+            if (hasParameter(Parameter.CHE) && hasParameter(Parameter.DE)) {
+                System.out.println("You can't use parameters -che (change extension) and -de (delete extension) together");
+                return false;
+            }
+            if ((hasParameter(Parameter.D) || Files.isDirectory(fromPath)) && (hasParameter(Parameter.CHE) || hasParameter(Parameter.DE))) {
+                System.out.println("You can't use parameters -che (change extension) or -de (delete extension) for directory");
+                return false;
+            }
+            if (hasParameter(Parameter.CHE) && hasParameter(Parameter.CHP) && !hasParameter(Parameter.CHN)) {
+                System.out.println("This combination of parameters cannot be used. Use -cha (change all) and give the full path with file name and extension");
+                return false;
+            }
+            if (hasParameter(Parameter.CHA)) {
+                addParameter(Parameter.CHP, Parameter.CHN, Parameter.CHE);
+            }
+            if (!hasParameter(Parameter.CHN) && !hasParameter(Parameter.CHE) && !hasParameter(Parameter.CHP)) {
+                addParameter(Parameter.CHP);
+            }
+
+            if (!(hasParameter(Parameter.CHP) && hasParameter(Parameter.CHN) && hasParameter(Parameter.CHE))) {
+                if (hasParameter(Parameter.CHP)) {
+                    toPath = toPath.resolve(fileName);
+                }
+                if (!(hasParameter(Parameter.CHE) && hasParameter(Parameter.CHN))) {
+                    if (hasParameter(Parameter.CHE)) {
+                        toPath = changeExtension(fromPath, toPath.toString());
+                    }
+                    if (hasParameter(Parameter.CHN)) {
+                        toPath = changeName(hasParameter(Parameter.CHP) ? toPath : fromPath, toPath.toString());
+                    }
+                } else {
+                    toPath = fromPath.getParent() != null ? fromPath.getParent().resolve(toPath) : toPath;
+                }
+            }
+            if (hasParameter(Parameter.DE)) {
+                toPath = deleteExtension(toPath);
+            }
+        } else {
+            toPath = fromPath;
+        }
+
         return true;
     }
 
@@ -166,4 +242,63 @@ public class ConsoleInputHandler {
         }
         return argsArrayList.toArray(String[]::new);
     }
+
+    private Path getFilenameWithoutExtension(Path path) {
+        String name = path.getFileName().toString();
+        if (new File(path.toString()).isFile()) {
+            if (name.lastIndexOf(".") > 0) {
+                name = name.substring(0, name.lastIndexOf("."));
+            }
+        }
+        return Path.of(name);
+    }
+
+    private boolean hasParameter(Parameter parameter) {
+        return parameters.contains(parameter);
+    }
+
+    private void addParameter(Parameter... parameter) {
+        for (int i = 0; i < parameter.length; i++) {
+            if (!hasParameter(parameter[i])) {
+                parameters.add(parameter[i]);
+            }
+        }
+    }
+
+    private boolean hasExtension(Path path) {
+        if (Files.isRegularFile(path)) {
+            return path.toString().contains(".");
+        } else {
+            return false;
+        }
+    }
+
+    private boolean isToPathDefined() {
+        return args.length - 1 == 2 + parameters.size();
+    }
+
+    private Path changeExtension(Path path, String newExtension) {
+        String strPath = path.toString();
+        if (!hasExtension(path)) {
+            strPath = strPath + newExtension;
+        } else {
+            strPath = strPath.substring(0, strPath.lastIndexOf(".")) + newExtension;
+        }
+        return Path.of(strPath);
+    }
+
+    private Path deleteExtension(Path path) {
+        String strPath = path.toString();
+        return Path.of(strPath.substring(0, strPath.lastIndexOf(".") == -1 ? strPath.length() : strPath.lastIndexOf(".")));
+    }
+
+    private Path changeName(Path path, String newName) {
+        String strPath = path.toString();
+        strPath = strPath.substring(0, strPath.lastIndexOf("\\") + 1) + newName;
+        if (hasExtension(path)) {
+            strPath = strPath + strPath.substring(strPath.lastIndexOf("."));
+        }
+        return Path.of(strPath);
+    }
+
 }
