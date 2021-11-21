@@ -4,23 +4,24 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.apache.commons.io.FileUtils;
 import ru.rompet.cloudstorage.common.FileStateTracker;
-import ru.rompet.cloudstorage.common.Response;
-import ru.rompet.cloudstorage.common.Request;
-import ru.rompet.cloudstorage.common.data.DirectoryStructure;
+import ru.rompet.cloudstorage.common.exception.FileNotExistsException;
+import ru.rompet.cloudstorage.common.exception.ImpossibleUniquelyIdentifyFileException;
+import ru.rompet.cloudstorage.common.transfer.Response;
+import ru.rompet.cloudstorage.common.transfer.Request;
+import ru.rompet.cloudstorage.common.transfer.data.DirectoryStructure;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 import ru.rompet.cloudstorage.server.dao.AuthenticationService;
-import static ru.rompet.cloudstorage.common.IO.*;
+import static ru.rompet.cloudstorage.common.Utils.*;
+import static ru.rompet.cloudstorage.common.transfer.IO.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketException;
-import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.sql.ResultSet;
 import java.util.List;
-import java.util.Properties;
 
 public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private String rootDirectory;
@@ -42,28 +43,38 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
 
     private void load(ChannelHandlerContext ctx, Request request) throws Exception {
         Path path = Path.of(rootDirectory + request.getFromPath());
-        if (Files.exists(path)) {
-            boolean isFile = Files.isRegularFile(path);
-            if (!fileStateTracker.isLock(request, rootDirectory, isFile)) {
-                if (isFile) {
-                    ctx.writeAndFlush(readPartFile(request, rootDirectory));
-                } else {
-                    request.addToPaths("\\");
-                    List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, false); // relative path, because full destination path may not match full source path
-                    for (Path filePath : filePaths) {
-                        Request request1 = (Request) request.clone();
-                        request1.addToPaths(filePath.toString());
-                        ctx.writeAndFlush(readPartFile(request1, rootDirectory));
-                    }
-                }
-            } else {
+        if (request.getPartFileInfo().isFirstPart()) {
+            try {
+                request = parsePathForSave(request);
+            } catch (FileNotExistsException e) {
                 Response response = new Response(request);
-                response.getErrorInfo().setFileLock(true);
+                response.getErrorInfo().setFileNotExists(true);
                 ctx.writeAndFlush(response);
+                return;
+            } catch (ImpossibleUniquelyIdentifyFileException e) {
+                Response response = new Response(request);
+                response.getErrorInfo().setImpossibleUniquelyIdentifyFileException(true);
+                response.getErrorInfo().setErrorDetails(e.getMessage());
+                ctx.writeAndFlush(response);
+                return;
+            }
+        }
+        boolean isFile = Files.isRegularFile(path);
+        if (!fileStateTracker.isLock(request, rootDirectory, isFile)) {
+            if (isFile) {
+                ctx.writeAndFlush(readPartFile(request, rootDirectory));
+            } else {
+                request.addToPaths("\\");
+                List<Path> filePaths = DirectoryStructure.listFiles(request, rootDirectory, false); // relative path, because full destination path may not match full source path
+                for (Path filePath : filePaths) {
+                    Request request1 = (Request) request.clone();
+                    request1.addToPaths(filePath.toString());
+                    ctx.writeAndFlush(readPartFile(request1, rootDirectory));
+                }
             }
         } else {
             Response response = new Response(request);
-            response.getErrorInfo().setFileNotExists(true);
+            response.getErrorInfo().setFileLock(true);
             ctx.writeAndFlush(response);
         }
     }
@@ -78,7 +89,9 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         } else {
             if (!request.hasData()) { // first initial request
                 if (!isPathExists(request, rootDirectory)) {
-                    if (request.hasParameter(Parameter.CD)) {
+                    if (request.hasParameter(Parameter.CD)
+                            || Path.of(rootDirectory + request.getFromPath()).getParent()
+                            .equals(Path.of(rootDirectory + request.getToPath()).getParent())) {
                         createParentDirectories(request, rootDirectory);
                     } else {
                         response.getErrorInfo().setPathNotExists(true);
@@ -263,5 +276,16 @@ public class RequestHandler extends SimpleChannelInboundHandler<Request> {
         } else {
             cause.printStackTrace();
         }
+    }
+
+    private Request parsePathForSave(Request request) throws Exception {
+        request.setFromPath(findFileByIncompleteName(rootDirectory, request.getParameters(), Path.of(request.getFromPath())).toString());
+        if (request.getFromPath().equals(request.getToPath())) {
+            request.setToPath(request.getFromPath());
+        } else {
+            request.setToPath(configurePathAccordingParameters(rootDirectory, request.getParameters(), Path.of(request.getFromPath()), Path.of(request.getToPath())).toString());
+        }
+        request.removeParameters(Parameter.getConsoleInputParameters());
+        return request;
     }
 }

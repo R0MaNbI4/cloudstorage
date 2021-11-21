@@ -14,19 +14,14 @@ import ru.rompet.cloudstorage.client.handler.ConsoleInputHandler;
 import ru.rompet.cloudstorage.client.handler.ResponseHandler;
 import ru.rompet.cloudstorage.client.handler.JsonDecoder;
 import ru.rompet.cloudstorage.client.handler.JsonEncoder;
-import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.transfer.Request;
 import ru.rompet.cloudstorage.common.Settings;
 import ru.rompet.cloudstorage.common.enums.Command;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.nio.file.Path;
-import java.util.Properties;
 import java.util.Scanner;
 
-import static ru.rompet.cloudstorage.common.IO.*;
+import static ru.rompet.cloudstorage.common.Utils.*;
 
 public class Client{
     private static boolean authenticated = false;
@@ -100,8 +95,10 @@ public class Client{
                                 System.out.println("You are not authenticated\nUse command 'auth login pass'");
                                 continue;
                             }
-                            if (request.getCommand() == Command.LOAD && !request.hasParameter(Parameter.CD)
-                                    && !isPathExists(request, "clientFiles\\")) {
+                            if (request.getCommand() == Command.LOAD
+                                    && !request.hasParameter(Parameter.CD)
+                                    && !isPathExists(request, "clientFiles\\")
+                                    && !request.getFromPath().equals(request.getToPath())) {
                                 System.out.println(("Path is not exists. Use parameter -cd to create all necessary directories"));
                                 continue;
                             }
@@ -115,6 +112,8 @@ public class Client{
                         System.out.println("Invalid path");
                     } else if (!input.isValidCredentials()) {
                         System.out.println("Invalid credentials");
+                    } else if (!input.isRootDefined()) {
+                        System.out.println("First you need to set the root directory\nUse CHROOT command");
                     }
                 }
             }

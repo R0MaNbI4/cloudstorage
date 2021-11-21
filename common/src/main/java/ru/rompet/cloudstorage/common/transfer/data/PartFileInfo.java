@@ -1,7 +1,7 @@
-package ru.rompet.cloudstorage.common.data;
+package ru.rompet.cloudstorage.common.transfer.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import ru.rompet.cloudstorage.common.Message;
+import ru.rompet.cloudstorage.common.transfer.Message;
 
 import java.io.Serializable;
 

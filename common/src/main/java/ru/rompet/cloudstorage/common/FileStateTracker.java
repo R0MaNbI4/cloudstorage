@@ -1,5 +1,7 @@
 package ru.rompet.cloudstorage.common;
 
+import ru.rompet.cloudstorage.common.transfer.Message;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

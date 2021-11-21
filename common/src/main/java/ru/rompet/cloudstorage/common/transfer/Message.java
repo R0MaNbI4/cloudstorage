@@ -1,13 +1,13 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.transfer;
 
-import ru.rompet.cloudstorage.common.data.Credentials;
-import ru.rompet.cloudstorage.common.data.PartFileInfo;
+import ru.rompet.cloudstorage.common.Utils;
+import ru.rompet.cloudstorage.common.transfer.data.Credentials;
+import ru.rompet.cloudstorage.common.transfer.data.PartFileInfo;
 import ru.rompet.cloudstorage.common.enums.Command;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public class Message implements Serializable, Cloneable {
     private boolean authenticated;
@@ -83,8 +83,8 @@ public class Message implements Serializable, Cloneable {
         return parameters.contains(parameter);
     }
 
-    public boolean removeParameter(Parameter parameter) {
-        return parameters.remove(parameter);
+    public boolean removeParameters(Parameter... parameter) {
+        return Utils.removeParameters(parameters, parameter);
     }
 
     public void addParameter(Parameter parameter) {

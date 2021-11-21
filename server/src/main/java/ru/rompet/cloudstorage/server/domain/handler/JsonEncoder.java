@@ -3,7 +3,7 @@ package ru.rompet.cloudstorage.server.domain.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import ru.rompet.cloudstorage.common.Response;
+import ru.rompet.cloudstorage.common.transfer.Response;
 
 import java.util.List;
 

@@ -3,7 +3,6 @@ package ru.rompet.cloudstorage.common;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Properties;
 
@@ -11,11 +10,14 @@ public class Settings {
     private static final String SETTINGS_DIRECTORY = ".cloudstorage";
     public static final String SETTINGS_FILE = "properties.properties";
 
-    public static boolean setRoot(String path) throws Exception {
+    public static boolean setRoot(String path) {
+        if (!path.endsWith("\\")) {
+            path = path + "\\";
+        }
         return Settings.setSetting("root", path);
     }
 
-    public static String getRoot() throws Exception {
+    public static String getRoot() {
         return Settings.getSetting("root");
     }
 
@@ -44,7 +46,7 @@ public class Settings {
         return settingsFile;
     }
 
-    private static boolean setSetting (String key, String value) throws Exception {
+    private static boolean setSetting (String key, String value) {
         try {
             Properties properties = new Properties();
             properties.load(new FileInputStream(getSettingsFile()));
@@ -56,9 +58,14 @@ public class Settings {
         return true;
     }
 
-    private static String getSetting (String key) throws Exception {
+    private static String getSetting (String key) {
         Properties properties = new Properties();
-        properties.load(new FileInputStream(getSettingsFile()));
+        try {
+            properties.load(new FileInputStream(getSettingsFile()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
         return properties.getProperty(key);
     }
 }

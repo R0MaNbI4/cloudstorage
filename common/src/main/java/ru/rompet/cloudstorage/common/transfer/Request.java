@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.transfer;
 
 import ru.rompet.cloudstorage.common.enums.Command;
 

@@ -1,4 +1,4 @@
-package ru.rompet.cloudstorage.common.data;
+package ru.rompet.cloudstorage.common.transfer.data;
 
 import java.io.Serializable;
 
@@ -10,6 +10,8 @@ public class ErrorInfo implements Serializable {
     private boolean isWrongPath;
     private boolean isFileUnableToDelete;
     private boolean isFileLock;
+    private boolean isImpossibleUniquelyIdentifyFileException;
+    private boolean IncompatibleParametersException;
     private String ErrorDetails;
 
     public ErrorInfo() {
@@ -96,5 +98,27 @@ public class ErrorInfo implements Serializable {
             isSuccessful = false;
         }
         isFileLock = fileLock;
+    }
+
+    public boolean isImpossibleUniquelyIdentifyFileException() {
+        return isImpossibleUniquelyIdentifyFileException;
+    }
+
+    public void setImpossibleUniquelyIdentifyFileException(boolean impossibleUniquelyIdentifyFileException) {
+        if (impossibleUniquelyIdentifyFileException) {
+            isSuccessful = false;
+        }
+        isImpossibleUniquelyIdentifyFileException = impossibleUniquelyIdentifyFileException;
+    }
+
+    public boolean isIncompatibleParametersException() {
+        return IncompatibleParametersException;
+    }
+
+    public void setIncompatibleParametersException(boolean incompatibleParametersException) {
+        if (incompatibleParametersException) {
+            isSuccessful = false;
+        }
+        IncompatibleParametersException = incompatibleParametersException;
     }
 }

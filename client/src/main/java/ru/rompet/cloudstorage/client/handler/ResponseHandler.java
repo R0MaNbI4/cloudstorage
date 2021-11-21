@@ -4,21 +4,22 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import ru.rompet.cloudstorage.client.Client;
 import ru.rompet.cloudstorage.common.FileStateTracker;
-import ru.rompet.cloudstorage.common.data.DirectoryStructure;
-import ru.rompet.cloudstorage.common.data.DirectoryStructureEntry;
-import ru.rompet.cloudstorage.common.Response;
-import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.Settings;
+import ru.rompet.cloudstorage.common.transfer.data.DirectoryStructure;
+import ru.rompet.cloudstorage.common.transfer.data.DirectoryStructureEntry;
+import ru.rompet.cloudstorage.common.transfer.Response;
+import ru.rompet.cloudstorage.common.transfer.Request;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
-import static ru.rompet.cloudstorage.common.IO.*;
+import static ru.rompet.cloudstorage.common.Utils.*;
+import static ru.rompet.cloudstorage.common.transfer.IO.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.SQLOutput;
 import java.util.List;
 
 public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
-    private final String DEFAULT_FILE_LOCATION = "clientFiles\\";
+    private String rootDirectory = Settings.getRoot();
     private final FileStateTracker fileStateTracker = new FileStateTracker();
 
     @Override
@@ -38,10 +39,10 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
     private void load(ChannelHandlerContext ctx, Response response) throws Exception {
         if (response.getErrorInfo().isSuccessful()) {
             if (response.getPartFileInfo().isFirstPart()) {
-                createParentDirectories(response, DEFAULT_FILE_LOCATION);
+                createParentDirectories(response, rootDirectory);
             }
-            fileStateTracker.sync(response, DEFAULT_FILE_LOCATION);
-            writePartFile(response, DEFAULT_FILE_LOCATION);
+            fileStateTracker.sync(response, rootDirectory);
+            writePartFile(response, rootDirectory);
             if (!response.getPartFileInfo().isLastPart()) {
                 Request request = new Request(response);
                 request.getPartFileInfo().addPosition(response, BUFFER_SIZE);
@@ -52,21 +53,23 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                 System.out.println("File not exists");
             } else if (response.getErrorInfo().isFileLock()) {
                 System.out.println("File has not been uploaded yet");
+            } else if (response.getErrorInfo().isImpossibleUniquelyIdentifyFileException()) {
+                System.out.println(response.getErrorInfo().getErrorDetails());
             }
         }
     }
 
     private void save(ChannelHandlerContext ctx, Response response) throws Exception {
-        Path path = Path.of(DEFAULT_FILE_LOCATION + response.getFromPath());
+        Path path = Path.of(rootDirectory + response.getFromPath());
         if (response.getErrorInfo().isSuccessful()) {
             if (Files.exists(path)) {
                 boolean isFile = Files.isRegularFile(path);
-                if (!fileStateTracker.isLock(response, DEFAULT_FILE_LOCATION, isFile)) {
+                if (!fileStateTracker.isLock(response, rootDirectory, isFile)) {
                     if (isFile) {
                         if (response.hasParameter(Parameter.RN) && response.getPartFileInfo().isFirstPart()) {
                             response.setToPath(rename(response.getToPath(), true));
                         }
-                        Request request = (Request) readPartFile(response, DEFAULT_FILE_LOCATION);
+                        Request request = (Request) readPartFile(response, rootDirectory);
                         ctx.writeAndFlush(request);
                     } else {
                         if (!response.hasParameter(Parameter.CD)) {
@@ -74,10 +77,10 @@ public class ResponseHandler extends SimpleChannelInboundHandler<Response> {
                         }
                         if (response.hasParameter(Parameter.RN)) {
                             response.setToPath(rename(response.getToPath(), false));
-                            response.removeParameter(Parameter.RN);
+                            response.removeParameters(Parameter.RN);
                         }
                         response.addToPaths("\\");
-                        List<Path> filePaths = DirectoryStructure.listFiles(response, DEFAULT_FILE_LOCATION, false);
+                        List<Path> filePaths = DirectoryStructure.listFiles(response, rootDirectory, false);
                         for (Path filePath : filePaths) {
                             Request request = new Request(response);
                             request.addToPaths(filePath.toString());

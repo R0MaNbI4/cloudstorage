@@ -1,7 +1,7 @@
-package ru.rompet.cloudstorage.common;
+package ru.rompet.cloudstorage.common.transfer;
 
-import ru.rompet.cloudstorage.common.data.DirectoryStructure;
-import ru.rompet.cloudstorage.common.data.ErrorInfo;
+import ru.rompet.cloudstorage.common.transfer.data.DirectoryStructure;
+import ru.rompet.cloudstorage.common.transfer.data.ErrorInfo;
 import ru.rompet.cloudstorage.common.enums.Command;
 
 import java.io.Serializable;
