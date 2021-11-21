@@ -15,14 +15,18 @@ import ru.rompet.cloudstorage.client.handler.ResponseHandler;
 import ru.rompet.cloudstorage.client.handler.JsonDecoder;
 import ru.rompet.cloudstorage.client.handler.JsonEncoder;
 import ru.rompet.cloudstorage.common.Request;
+import ru.rompet.cloudstorage.common.Settings;
 import ru.rompet.cloudstorage.common.enums.Command;
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
-import static ru.rompet.cloudstorage.common.IO.isPathExists;
-
-import java.nio.file.Files;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.file.Path;
+import java.util.Properties;
 import java.util.Scanner;
+
+import static ru.rompet.cloudstorage.common.IO.*;
 
 public class Client{
     private static boolean authenticated = false;
@@ -62,28 +66,34 @@ public class Client{
             System.out.println("Client started");
 
             Scanner scanner = new Scanner(System.in);
-            ConsoleInputHandler consoleInputHandler = new ConsoleInputHandler();
+            ConsoleInputHandler input = new ConsoleInputHandler();
             while (true) {
-                if (consoleInputHandler.validate(scanner.nextLine())) {
-                    if (consoleInputHandler.getCommand() == Command.HELP) {
+                if (input.validate(scanner.nextLine())) {
+                    if (input.getCommand() == Command.HELP) {
                         System.out.println(new HelpMessage());
-                    } else {
-                        Request request = new Request(consoleInputHandler.getCommand());
-                        request.setAuthenticated(authenticated);
-                        if (consoleInputHandler.getParameters().size() > 0) {
-                            request.setParameters(consoleInputHandler.getParameters());
+                    } else if (input.getCommand() == Command.CHROOT) {
+                        if (Settings.setRoot(input.getFromPath())) {
+                            System.out.println("Successful");
                         }
-                        if (consoleInputHandler.getCommand() == Command.AUTH ||
-                                consoleInputHandler.getCommand() == Command.REGISTER) {
-                            request.getCredentials().setLogin(consoleInputHandler.getLogin());
-                            request.getCredentials().setPassword(consoleInputHandler.getPassword());
+                    } else if (input.getCommand() == Command.SHROOT) {
+                        System.out.println(Settings.getRoot());
+                    } else {
+                        Request request = new Request(input.getCommand());
+                        request.setAuthenticated(authenticated);
+                        if (input.getParameters().size() > 0) {
+                            request.setParameters(input.getParameters());
+                        }
+                        if (input.getCommand() == Command.AUTH ||
+                                input.getCommand() == Command.REGISTER) {
+                            request.getCredentials().setLogin(input.getLogin());
+                            request.getCredentials().setPassword(input.getPassword());
                             if (request.isAuthenticated()) {
                                 System.out.println("You are already authenticated");
                                 continue;
                             }
                         } else {
-                            request.setFromPath(consoleInputHandler.getFromPath());
-                            request.setToPath(consoleInputHandler.getToPath());
+                            request.setFromPath(input.getFromPath());
+                            request.setToPath(input.getToPath());
                             if (request.isAuthenticated()) {
                                 request.getCredentials().setLogin(login);
                             } else {
@@ -99,11 +109,11 @@ public class Client{
                         f.channel().writeAndFlush(request);
                     }
                 } else {
-                    if (!consoleInputHandler.isValidCommand()) {
+                    if (!input.isValidCommand()) {
                         System.out.println("Invalid command");
-                    } else if (!consoleInputHandler.isValidPath()) {
+                    } else if (!input.isValidPath()) {
                         System.out.println("Invalid path");
-                    } else if (!consoleInputHandler.isValidCredentials()) {
+                    } else if (!input.isValidCredentials()) {
                         System.out.println("Invalid credentials");
                     }
                 }

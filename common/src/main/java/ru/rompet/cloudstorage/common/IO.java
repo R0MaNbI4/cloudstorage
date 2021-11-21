@@ -2,6 +2,7 @@ package ru.rompet.cloudstorage.common;
 
 import ru.rompet.cloudstorage.common.enums.Parameter;
 
+import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;

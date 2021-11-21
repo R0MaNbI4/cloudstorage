@@ -20,6 +20,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class RequestHandler extends SimpleChannelInboundHandler<Request> {
     private String rootDirectory;
